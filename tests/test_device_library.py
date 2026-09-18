@@ -38,6 +38,7 @@ from comfylab.devices.thorlabs.lts200 import ThorlabsLTS200
 from comfylab.devices.thorlabs.mdt69x import ThorlabsMDT69X
 from comfylab.devices.ni.nidaqmx_device import NIDAQmxDevice
 from comfylab.devices.mcc.mcdaq1208ls import MCCDAQ1208LS
+from comfylab.devices.coherent.ws1000a import WaveShaper1000A
 
 from comfylab.engine.registry import BLOCK_REGISTRY
 
@@ -259,6 +260,13 @@ def test_block_registration_discovery():
     assert "devices/mcc/mcdaq1208ls/connect" in registered
     assert "devices/generic/oscilloscope/connect" in registered
     assert "devices/generic/camera/connect" in registered
+    assert "devices/coherent/ws1000a/connect" in registered
+    assert "devices/coherent/ws1000a/get_info" in registered
+    assert "devices/coherent/ws1000a/predefined_filter" in registered
+    assert "devices/coherent/ws1000a/custom_filter" in registered
+    assert "devices/coherent/ws1000a/upload_file" in registered
+    assert "devices/coherent/ws1000a/get_profile" in registered
+    assert "devices/coherent/ws1000a/shutter" in registered
 
 
 def test_extract_float_and_floats_robustness():
