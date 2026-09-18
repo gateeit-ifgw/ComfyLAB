@@ -32,6 +32,7 @@ interface PackageItem {
   hashes?: Record<string, string>;
   dependencies?: string[];
   provides?: string[];
+  i18n?: Record<string, { name?: string; description?: string }>;
 }
 
 interface CatalogData {
@@ -51,7 +52,9 @@ interface InstalledPackage {
   type: string;
   path: string;
   files: string[];
+  dependencies?: string[];
   installed_at: number;
+  i18n?: Record<string, { name?: string; description?: string }>;
 }
 
 interface SubscriptionItem {
@@ -144,6 +147,16 @@ export const StoreModal: React.FC<StoreModalProps> = ({ onClose, onRefreshRegist
   }, [catalog]);
 
   // Filtered packages
+  const getPackageName = (pkg: { name: string; id?: string; i18n?: Record<string, { name?: string; description?: string }> }) => {
+    const lang = i18n.language;
+    return pkg.i18n?.[lang]?.name || pkg.i18n?.['en']?.name || pkg.name;
+  };
+
+  const getPackageDescription = (pkg: { description?: string; i18n?: Record<string, { name?: string; description?: string }> }) => {
+    const lang = i18n.language;
+    return pkg.i18n?.[lang]?.description || pkg.i18n?.['en']?.description || pkg.description || '';
+  };
+
   const filteredPackages = useMemo(() => {
     if (!catalog?.packages) return [];
     return catalog.packages.filter((pkg) => {
@@ -163,8 +176,10 @@ export const StoreModal: React.FC<StoreModalProps> = ({ onClose, onRefreshRegist
       // Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const matchesName = pkg.name.toLowerCase().includes(q);
-        const matchesDesc = pkg.description?.toLowerCase().includes(q);
+        const localizedName = getPackageName(pkg).toLowerCase();
+        const localizedDesc = getPackageDescription(pkg).toLowerCase();
+        const matchesName = pkg.name.toLowerCase().includes(q) || localizedName.includes(q);
+        const matchesDesc = pkg.description?.toLowerCase().includes(q) || localizedDesc.includes(q);
         const matchesVendor = pkg.vendor?.toLowerCase().includes(q);
         const matchesId = pkg.id.toLowerCase().includes(q);
         if (!matchesName && !matchesDesc && !matchesVendor && !matchesId) {
@@ -185,8 +200,8 @@ export const StoreModal: React.FC<StoreModalProps> = ({ onClose, onRefreshRegist
       if (res.data.status === 'success' || res.data.status === 'partial_success') {
         const count = res.data.installed?.length || 1;
         const msg = count > 1
-          ? `Installed ${pkgId} and ${count - 1} dependencies successfully!`
-          : `Installed ${pkgId} successfully!`;
+          ? t('storeModal.installedSuccessMulti', 'Installed {{id}} and {{count}} dependencies successfully!', { id: pkgId, count: count - 1 })
+          : t('storeModal.installedSuccessSingle', 'Installed {{id}} successfully!', { id: pkgId });
         setMessage({ type: 'success', text: msg });
         await loadData();
         if (onRefreshRegistry) onRefreshRegistry();
@@ -206,7 +221,7 @@ export const StoreModal: React.FC<StoreModalProps> = ({ onClose, onRefreshRegist
     setMessage(null);
     try {
       await axios.post(`${BACKEND_URL}/store/uninstall`, { package_id: pkgId });
-      setMessage({ type: 'success', text: `Uninstalled ${pkgId}.` });
+      setMessage({ type: 'success', text: t('storeModal.uninstalledSuccess', 'Uninstalled {{id}}.', { id: pkgId }) });
       await loadData();
       if (onRefreshRegistry) onRefreshRegistry();
     } catch (err: any) {
@@ -588,10 +603,10 @@ export const StoreModal: React.FC<StoreModalProps> = ({ onClose, onRefreshRegist
                               </div>
 
                               <h4 style={{ margin: '0 0 6px 0', fontSize: '1rem', color: 'var(--text-color)' }}>
-                                {pkg.name}
+                                {getPackageName(pkg)}
                               </h4>
                               <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.4', maxHeight: '56px', overflow: 'hidden' }}>
-                                {pkg.description}
+                                {getPackageDescription(pkg)}
                               </p>
                               {pkg.dependencies && pkg.dependencies.length > 0 && (
                                 <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
@@ -608,7 +623,7 @@ export const StoreModal: React.FC<StoreModalProps> = ({ onClose, onRefreshRegist
                                     }}
                                     title={`Dependencies:\n${pkg.dependencies.join('\n')}`}
                                   >
-                                    🔗 {pkg.dependencies.length} {pkg.dependencies.length === 1 ? 'dependency' : 'dependencies'}
+                                    🔗 {pkg.dependencies.length} {pkg.dependencies.length === 1 ? t('storeModal.dependencySingular', 'dependency') : t('storeModal.dependencyPlural', 'dependencies')}
                                   </span>
                                 </div>
                               )}
@@ -671,7 +686,7 @@ export const StoreModal: React.FC<StoreModalProps> = ({ onClose, onRefreshRegist
                         {t('storeModal.tabSubscriptions', 'Subscriptions')}
                       </h4>
                       <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                        Subscribe to categories or specific instrument makers to keep them automatically installed and updated.
+                        {t('storeModal.subscriptionsSubtitle', 'Subscribe to categories or specific instrument makers to keep them automatically installed and updated.')}
                       </span>
                     </div>
 
@@ -682,7 +697,7 @@ export const StoreModal: React.FC<StoreModalProps> = ({ onClose, onRefreshRegist
                       style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px' }}
                     >
                       <span>🔄</span>
-                      <span>{actionInProgress === 'sync' ? 'Syncing...' : t('storeModal.syncNow', 'Sync Now')}</span>
+                      <span>{actionInProgress === 'sync' ? t('storeModal.syncing', 'Syncing...') : t('storeModal.syncNow', 'Sync Now')}</span>
                       {(updatesCount > 0 || newSubscribedCount > 0) && (
                         <span style={{ background: '#ffffff', color: '#0f172a', padding: '1px 6px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold' }}>
                           {updatesCount + newSubscribedCount}
@@ -692,13 +707,13 @@ export const StoreModal: React.FC<StoreModalProps> = ({ onClose, onRefreshRegist
                   </div>
 
                   {/* Category Subscription Cards */}
-                  <h5 style={{ margin: '0 0 10px 0', color: 'var(--text-color)', fontSize: '0.95rem' }}>Categories</h5>
+                  <h5 style={{ margin: '0 0 10px 0', color: 'var(--text-color)', fontSize: '0.95rem' }}>{t('storeModal.categories', 'Categories')}</h5>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px', marginBottom: '24px' }}>
                     {[
-                      { type: 'category', target: 'instruments', name: 'All Instruments', icon: '🎛️', desc: 'Auto-sync all lab equipment drivers and blocks.' },
-                      { type: 'category', target: 'blocks', name: 'Domain Blocks', icon: '🧩', desc: 'Audio, signal processing, and custom utility blocks.' },
-                      { type: 'category', target: 'clusters', name: 'Community Clusters', icon: '📦', desc: 'Reusable composite subgraphs & algorithms.' },
-                      { type: 'category', target: 'blueprints', name: 'Example Blueprints', icon: '📋', desc: 'Ready-to-run test & measurement workflows.' },
+                      { type: 'category', target: 'instruments', name: t('storeModal.catAllInstruments', 'All Instruments'), icon: '🎛️', desc: t('storeModal.catAllInstrumentsDesc', 'Auto-sync all lab equipment drivers and blocks.') },
+                      { type: 'category', target: 'blocks', name: t('storeModal.catBlocks', 'Domain Blocks'), icon: '🧩', desc: t('storeModal.catBlocksDesc', 'Audio, signal processing, and custom utility blocks.') },
+                      { type: 'category', target: 'clusters', name: t('storeModal.catClusters', 'Community Clusters'), icon: '📦', desc: t('storeModal.catClustersDesc', 'Reusable composite subgraphs & algorithms.') },
+                      { type: 'category', target: 'blueprints', name: t('storeModal.catBlueprints', 'Example Blueprints'), icon: '📋', desc: t('storeModal.catBlueprintsDesc', 'Ready-to-run test & measurement workflows.') },
                     ].map((cat) => {
                       const subscribed = isSubscribed(cat.type, cat.target);
                       const isProc = actionInProgress === `sub-${cat.target}`;
@@ -743,7 +758,7 @@ export const StoreModal: React.FC<StoreModalProps> = ({ onClose, onRefreshRegist
                   </div>
 
                   {/* Vendor Subscription Cards */}
-                  <h5 style={{ margin: '0 0 10px 0', color: 'var(--text-color)', fontSize: '0.95rem' }}>Instrument Vendors</h5>
+                  <h5 style={{ margin: '0 0 10px 0', color: 'var(--text-color)', fontSize: '0.95rem' }}>{t('storeModal.instrumentVendors', 'Instrument Vendors')}</h5>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
                     {vendors.map((v) => {
                       const subscribed = isSubscribed('vendor', v);
@@ -765,7 +780,9 @@ export const StoreModal: React.FC<StoreModalProps> = ({ onClose, onRefreshRegist
                         >
                           <div>
                             <strong style={{ fontSize: '0.9rem', color: 'var(--text-color)', display: 'block' }}>{v}</strong>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{vendorPkgsCount} package(s)</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                              {vendorPkgsCount} {vendorPkgsCount === 1 ? t('storeModal.packageSingular', 'package') : t('storeModal.packagePlural', 'packages')}
+                            </span>
                           </div>
 
                           <button
@@ -796,7 +813,7 @@ export const StoreModal: React.FC<StoreModalProps> = ({ onClose, onRefreshRegist
                       <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>📦</div>
                       <p>{t('storeModal.emptyInstalled', 'No Store packages currently installed.')}</p>
                       <button className="button-primary" onClick={() => setActiveTab('browse')}>
-                        {t('storeModal.tabBrowse', 'Browse Store')}
+                        {t('storeModal.browseStore', 'Browse Store')}
                       </button>
                     </div>
                   ) : (
@@ -817,11 +834,11 @@ export const StoreModal: React.FC<StoreModalProps> = ({ onClose, onRefreshRegist
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <span style={{ fontSize: '1.4rem' }}>{getTypeIcon(pkg.type)}</span>
                             <div>
-                              <strong style={{ color: 'var(--text-color)' }}>{pkg.name}</strong>
+                              <strong style={{ color: 'var(--text-color)' }}>{getPackageName(pkg)}</strong>
                               <div style={{ display: 'flex', gap: '8px', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
                                 {pkg.vendor && <span>{pkg.vendor}</span>}
                                 <span>v{pkg.version}</span>
-                                <span>({pkg.files?.length || 0} files)</span>
+                                <span>({pkg.files?.length || 0} {pkg.files?.length === 1 ? t('storeModal.fileSingular', 'file') : t('storeModal.filePlural', 'files')})</span>
                               </div>
                             </div>
                           </div>
@@ -847,7 +864,7 @@ export const StoreModal: React.FC<StoreModalProps> = ({ onClose, onRefreshRegist
         {/* Footer */}
         <div style={{ padding: '12px 24px', borderTop: '1px solid var(--block-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.05)' }}>
           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-            Official Catalog: <a href="https://github.com/gateeit-ifgw/comfylab-store" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-color, #38bdf8)' }}>gateeit-ifgw/comfylab-store</a>
+            {t('storeModal.officialCatalog', 'Official Catalog')}: <a href="https://github.com/gateeit-ifgw/comfylab-store" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-color, #38bdf8)' }}>gateeit-ifgw/comfylab-store</a>
           </span>
           <button className="button-secondary" onClick={onClose} style={{ padding: '6px 16px' }}>
             {t('storeModal.close', 'Close')}

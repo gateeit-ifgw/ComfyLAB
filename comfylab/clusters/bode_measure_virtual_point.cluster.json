@@ -2,7 +2,7 @@
   "name": "Bode Measure Virtual Point",
   "type_name": "builtin/cluster/bode_measure_virtual_point",
   "category": "Clusters",
-  "icon": "📈",
+  "icon": "\ud83d\udcc8",
   "display_name": "Bode Measure Virtual Point",
   "description": "Sets excitation frequency on Virtual Signal Generator, auto-adjusts Virtual Oscilloscope timebase, acquires CH1/CH2, and calculates Gain (dB) and Vpp.",
   "internal_blueprint": {
@@ -473,5 +473,39 @@
         }
       }
     ]
-  }
+  },
+  "i18n": {
+    "pt-BR": {
+      "display_name": "Medir Ponto Virtual Bode",
+      "description": "Define a frequ\u00eancia de excita\u00e7\u00e3o no Gerador Virtual, ajusta automaticamente a base de tempo do Oscilosc\u00f3pio Virtual, adquire CH1/CH2 e calcula Ganho (dB) e Vpp.",
+      "category": "Clusters/Bode",
+      "pins": {
+        "In": "Entrada",
+        "Out": "Sa\u00edda",
+        "SigGenDevice": "DispositivoGerador",
+        "ScopeDevice": "DispositivoOscilosc\u00f3pio",
+        "Frequency": "Frequ\u00eancia",
+        "Gain_dB": "Ganho_dB",
+        "Vin_Vpp": "Vin_Vpp",
+        "Vout_Vpp": "Vout_Vpp"
+      }
+    },
+    "es": {
+      "display_name": "Medir Punto Virtual Bode",
+      "description": "Configura la frecuencia de excitaci\u00f3n en el Generador Virtual, auto-ajusta la base de tiempo del Osciloscopio Virtual, adquiere CH1/CH2 y calcula Ganancia (dB) y Vpp.",
+      "category": "Clusters/Bode",
+      "pins": {
+        "In": "Entrada",
+        "Out": "Salida",
+        "SigGenDevice": "DispositivoGenerador",
+        "ScopeDevice": "DispositivoOsciloscopio",
+        "Frequency": "Frecuencia",
+        "Gain_dB": "Ganancia_dB",
+        "Vin_Vpp": "Vin_Vpp",
+        "Vout_Vpp": "Vout_Vpp"
+      }
+    }
+  },
+  "creator_identity": "3a61083b4c2ebce87fa7c250b3e64712a457315920952ce920dd8bd88509a022",
+  "signature": "/2B9SS5AICyJcokFn99mrfnz0m1n4tP3Lp65AdeXNwsJFQADS7qUqSqIMuxckf08qjvW/M4vrQJmxG8h1mqcBA=="
 }

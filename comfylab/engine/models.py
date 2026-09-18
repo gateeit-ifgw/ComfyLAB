@@ -91,3 +91,4 @@ class ClusterDefinitionModel(BaseModel):
     description: str = ""
     internal_blueprint: BlueprintModel
     boundary_pins: BoundaryPinsModel
+    i18n: Optional[Dict[str, Any]] = None

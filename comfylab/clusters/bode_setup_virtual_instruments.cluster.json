@@ -2,7 +2,7 @@
   "name": "Bode Setup Virtual Instruments",
   "type_name": "builtin/cluster/bode_setup_virtual_instruments",
   "category": "Clusters",
-  "icon": "🔌",
+  "icon": "\ud83d\udd0c",
   "display_name": "Bode Setup Virtual Instruments",
   "description": "Initializes Virtual Signal Generator and Virtual Oscilloscope channels for Bode plot measurements.",
   "internal_blueprint": {
@@ -338,5 +338,35 @@
         }
       }
     ]
-  }
+  },
+  "i18n": {
+    "pt-BR": {
+      "display_name": "Configurar Instrumentos Virtuais Bode",
+      "description": "Inicializa os canais do Gerador de Fun\u00e7\u00f5es Virtual e do Oscilosc\u00f3pio Virtual para medi\u00e7\u00f5es de diagrama de Bode.",
+      "category": "Clusters/Bode",
+      "pins": {
+        "In": "Entrada",
+        "Out": "Sa\u00edda",
+        "SigGenAddress": "Endere\u00e7oGerador",
+        "ScopeAddress": "Endere\u00e7oOscilosc\u00f3pio",
+        "SigGenDevice": "DispositivoGerador",
+        "ScopeDevice": "DispositivoOscilosc\u00f3pio"
+      }
+    },
+    "es": {
+      "display_name": "Configurar Instrumentos Virtuales Bode",
+      "description": "Inicializa los canales del Generador de Funciones Virtual y del Osciloscopio Virtual para mediciones de diagrama de Bode.",
+      "category": "Clusters/Bode",
+      "pins": {
+        "In": "Entrada",
+        "Out": "Salida",
+        "SigGenAddress": "Direcci\u00f3nGenerador",
+        "ScopeAddress": "Direcci\u00f3nOsciloscopio",
+        "SigGenDevice": "DispositivoGenerador",
+        "ScopeDevice": "DispositivoOsciloscopio"
+      }
+    }
+  },
+  "creator_identity": "3a61083b4c2ebce87fa7c250b3e64712a457315920952ce920dd8bd88509a022",
+  "signature": "3SatnYqePM4GSI4m9nayvb/8rLXZhah23isV8gr54mEcRZr3LA2gL8CGrH7ifx1b4cAXheWxapCYYC+X7PBhBA=="
 }

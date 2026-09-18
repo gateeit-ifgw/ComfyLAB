@@ -292,5 +292,37 @@
         }
       }
     ]
-  }
+  },
+  "i18n": {
+    "pt-BR": {
+      "display_name": "Exportar Conjunto de Dados Bode",
+      "description": "Gera um caminho com carimbo de data/hora, empacota arrays de frequ\u00eancia/ganho/tens\u00e3o e exporta os dados em CSV.",
+      "category": "Clusters/Bode",
+      "pins": {
+        "Write": "Gravar",
+        "Out": "Sa\u00edda",
+        "Frequencies": "Frequ\u00eancias",
+        "Gains_dB": "Ganhos_dB",
+        "Vin_Vpp": "Vin_Vpp",
+        "Vout_Vpp": "Vout_Vpp",
+        "SavedPath": "CaminhoSalvo"
+      }
+    },
+    "es": {
+      "display_name": "Exportar Conjunto de Datos Bode",
+      "description": "Genera una ruta con marca de tiempo, empaqueta arrays de frecuencia/ganancia/voltaje y exporta los datos en CSV.",
+      "category": "Clusters/Bode",
+      "pins": {
+        "Write": "Escribir",
+        "Out": "Salida",
+        "Frequencies": "Frecuencias",
+        "Gains_dB": "Ganancias_dB",
+        "Vin_Vpp": "Vin_Vpp",
+        "Vout_Vpp": "Vout_Vpp",
+        "SavedPath": "RutaGuardada"
+      }
+    }
+  },
+  "creator_identity": "3a61083b4c2ebce87fa7c250b3e64712a457315920952ce920dd8bd88509a022",
+  "signature": "5Dg7iDRqV1VxnmdV3swNdy7Vt9Bkj1DAeBJW9qEKanatUR4wtHujIsGWHmxSmPyfur8CGWTx0ti6sfmaCL1SBg=="
 }

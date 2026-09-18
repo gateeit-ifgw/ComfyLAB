@@ -205,6 +205,7 @@ def register_cluster_block(cluster_def: ClusterDefinitionModel, file_path: str =
         icon = cluster_def.icon
         display_name = cluster_def.display_name
         description = cluster_def.description
+        i18n = getattr(cluster_def, "i18n", {}) or {}
         _cluster_file_path = file_path
 
         def __init__(self, block_id: str, properties: Optional[Dict[str, Any]] = None):

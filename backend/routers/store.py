@@ -340,7 +340,8 @@ async def download_and_install_package(pkg: Dict[str, Any]) -> Dict[str, Any]:
         "path": rel_path,
         "files": downloaded_files,
         "dependencies": pkg.get("dependencies", []),
-        "installed_at": time.time()
+        "installed_at": time.time(),
+        "i18n": pkg.get("i18n", {})
     }
     save_installed(installed)
 
@@ -384,6 +385,7 @@ async def get_status(force_catalog: bool = Query(False)):
                     "current_version": inst_ver,
                     "latest_version": cat_ver,
                     "vendor": inst.get("vendor"),
+                    "i18n": pkg_by_id[pkg_id].get("i18n", inst.get("i18n", {})),
                 })
 
     new_in_subscriptions = []
@@ -399,6 +401,7 @@ async def get_status(force_catalog: bool = Query(False)):
                     "version": pkg.get("version", "1.0.0"),
                     "vendor": pkg.get("vendor"),
                     "type": pkg.get("type", "instrument"),
+                    "i18n": pkg.get("i18n", {}),
                     "matched_subscription": sub.get("name") or sub.get("target")
                 })
                 break
