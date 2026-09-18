@@ -20,21 +20,44 @@ import pytest
 import numpy as np
 import requests
 
-from comfylab.devices.coherent.ws1000a import (
-    WaveShaper1000A,
-    SPEED_OF_LIGHT_NM_THZ
-)
-from comfylab.blocks.devices.coherent.ws1000a_blocks import (
-    WaveShaper1000AConnectBlock,
-    WaveShaper1000AGetInfoBlock,
-    WaveShaper1000APredefinedFilterBlock,
-    WaveShaper1000ACustomFilterBlock,
-    WaveShaper1000AUploadFileBlock,
-    WaveShaper1000AGetProfileBlock,
-    WaveShaper1000AShutterBlock
-)
 from comfylab.blocks.base import ExecutionContext
 from comfylab.engine.locks import ResourceLockManager
+from comfylab.blocks.loader import load_module_from_filepath
+
+try:
+    from comfylab.devices.coherent.ws1000a import (
+        WaveShaper1000A,
+        SPEED_OF_LIGHT_NM_THZ
+    )
+    from comfylab.blocks.devices.coherent.ws1000a_blocks import (
+        WaveShaper1000AConnectBlock,
+        WaveShaper1000AGetInfoBlock,
+        WaveShaper1000APredefinedFilterBlock,
+        WaveShaper1000ACustomFilterBlock,
+        WaveShaper1000AUploadFileBlock,
+        WaveShaper1000AGetProfileBlock,
+        WaveShaper1000AShutterBlock
+    )
+except ModuleNotFoundError:
+    store_candidates = [
+        Path.home() / ".comfylab" / "store" / "instruments" / "coherent" / "ws1000a",
+        Path(__file__).resolve().parent.parent / "dist" / "comfylab-store" / "instruments" / "coherent" / "ws1000a",
+    ]
+    cand = next((c for c in store_candidates if (c / "driver.py").exists()), None)
+    if cand:
+        drv_mod = load_module_from_filepath(str(cand / "driver.py"))
+        blk_mod = load_module_from_filepath(str(cand / "blocks.py"))
+        WaveShaper1000A = getattr(drv_mod, "WaveShaper1000A", None)
+        SPEED_OF_LIGHT_NM_THZ = getattr(drv_mod, "SPEED_OF_LIGHT_NM_THZ", 299792.458)
+        WaveShaper1000AConnectBlock = getattr(blk_mod, "WaveShaper1000AConnectBlock", None)
+        WaveShaper1000AGetInfoBlock = getattr(blk_mod, "WaveShaper1000AGetInfoBlock", None)
+        WaveShaper1000APredefinedFilterBlock = getattr(blk_mod, "WaveShaper1000APredefinedFilterBlock", None)
+        WaveShaper1000ACustomFilterBlock = getattr(blk_mod, "WaveShaper1000ACustomFilterBlock", None)
+        WaveShaper1000AUploadFileBlock = getattr(blk_mod, "WaveShaper1000AUploadFileBlock", None)
+        WaveShaper1000AGetProfileBlock = getattr(blk_mod, "WaveShaper1000AGetProfileBlock", None)
+        WaveShaper1000AShutterBlock = getattr(blk_mod, "WaveShaper1000AShutterBlock", None)
+    else:
+        pytestmark = pytest.mark.skip(reason="Coherent WaveShaper 1000A store package not available")
 
 
 # =============================================================================

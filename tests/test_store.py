@@ -243,3 +243,34 @@ def test_install_and_uninstall_package(tmp_path, monkeypatch):
     assert not pkg_dir.exists()
     installed_data_after = json.loads(installed_file.read_text(encoding="utf-8"))
     assert "instruments/test/mock_dmm" not in installed_data_after
+
+
+def test_store_relative_import_and_loader(tmp_path, monkeypatch):
+    from comfylab.blocks.loader import load_blocks_from_directory
+    from comfylab.engine.registry import BLOCK_REGISTRY
+
+    pkg_dir = tmp_path / "instruments" / "test_store_vendor" / "device_x"
+    pkg_dir.mkdir(parents=True)
+
+    driver_code = """
+class DeviceXDriver:
+    def read_val(self):
+        return 42
+"""
+    block_code = """
+from comfylab.engine.registry import register_block
+from comfylab.blocks.base import BaseBlock
+from .driver import DeviceXDriver
+
+@register_block("devices/test_store_vendor/device_x/read")
+class DeviceXReadBlock(BaseBlock):
+    pass
+"""
+    (pkg_dir / "driver.py").write_text(driver_code, encoding="utf-8")
+    (pkg_dir / "blocks.py").write_text(block_code, encoding="utf-8")
+
+    try:
+        load_blocks_from_directory(str(pkg_dir))
+        assert "devices/test_store_vendor/device_x/read" in BLOCK_REGISTRY
+    finally:
+        BLOCK_REGISTRY.pop("devices/test_store_vendor/device_x/read", None)

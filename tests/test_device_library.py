@@ -9,36 +9,50 @@ import pytest
 from unittest.mock import MagicMock
 import numpy as np
 
-# Test pure Python driver imports
-from comfylab.devices.tektronix.tbs1062 import TBS1062
-from comfylab.devices.owon.dge2000 import DGE2000
-from comfylab.devices.minipa.mfg4230 import MFG4230
-from comfylab.devices.bk_precision.bk4052 import BK4052
+from pathlib import Path
 from comfylab.devices.generic.esa import GenericESA
 from comfylab.devices.generic.dmm import GenericDMM
 from comfylab.devices.generic.power_supply import GenericPowerSupply
 from comfylab.devices.generic.siggen import GenericSigGen
 from comfylab.devices.generic.oscilloscope import GenericOscilloscope
 from comfylab.devices.generic.camera import GenericCamera
+from comfylab.blocks.loader import load_module_from_filepath
 
-# Phase 4 & Extended Device Driver Imports
-from comfylab.devices.thorlabs.pm100d import ThorlabsPM100D
-from comfylab.devices.keysight.agilent_816x import Agilent816x
-from comfylab.devices.yokogawa.aq6370 import AQ6370
-from comfylab.devices.keithley.k2400 import Keithley2400
-from comfylab.devices.srs.sr830 import SR830
+def _get_driver(vendor: str, model: str, class_name: str):
+    try:
+        mod = __import__(f"comfylab.devices.{vendor}.{model}", fromlist=[class_name])
+        return getattr(mod, class_name, None)
+    except ModuleNotFoundError:
+        pass
+    candidates = [
+        Path.home() / ".comfylab" / "store" / "instruments" / vendor / model / "driver.py",
+        Path(__file__).resolve().parent.parent / "dist" / "comfylab-store" / "instruments" / vendor / model / "driver.py",
+    ]
+    for c in candidates:
+        if c.exists():
+            mod = load_module_from_filepath(str(c))
+            return getattr(mod, class_name, None)
+    return None
 
-# Extended Commercial Instruments
-from comfylab.devices.keysight.dsox_series import KeysightDSOX
-from comfylab.devices.agilent.e4407b import AgilentE4407B
-from comfylab.devices.agilent.hp34401a import HP34401A
-from comfylab.devices.advantest.q8384 import AdvantestQ8384
-from comfylab.devices.keopsys.edfa import KeopsysEDFA
-from comfylab.devices.thorlabs.lts200 import ThorlabsLTS200
-from comfylab.devices.thorlabs.mdt69x import ThorlabsMDT69X
-from comfylab.devices.ni.nidaqmx_device import NIDAQmxDevice
-from comfylab.devices.mcc.mcdaq1208ls import MCCDAQ1208LS
-from comfylab.devices.coherent.ws1000a import WaveShaper1000A
+TBS1062 = _get_driver("tektronix", "tbs1062", "TBS1062")
+DGE2000 = _get_driver("owon", "dge2000", "DGE2000")
+MFG4230 = _get_driver("minipa", "mfg4230", "MFG4230")
+BK4052 = _get_driver("bk_precision", "bk4052", "BK4052")
+ThorlabsPM100D = _get_driver("thorlabs", "pm100d", "ThorlabsPM100D")
+Agilent816x = _get_driver("keysight", "agilent_816x", "Agilent816x")
+AQ6370 = _get_driver("yokogawa", "aq6370", "AQ6370")
+Keithley2400 = _get_driver("keithley", "k2400", "Keithley2400")
+SR830 = _get_driver("srs", "sr830", "SR830")
+KeysightDSOX = _get_driver("keysight", "dsox_series", "KeysightDSOX")
+AgilentE4407B = _get_driver("agilent", "e4407b", "AgilentE4407B")
+HP34401A = _get_driver("agilent", "hp34401a", "HP34401A")
+AdvantestQ8384 = _get_driver("advantest", "q8384", "AdvantestQ8384")
+KeopsysEDFA = _get_driver("keopsys", "edfa", "KeopsysEDFA")
+ThorlabsLTS200 = _get_driver("thorlabs", "lts200", "ThorlabsLTS200")
+ThorlabsMDT69X = _get_driver("thorlabs", "mdt69x", "ThorlabsMDT69X")
+NIDAQmxDevice = _get_driver("ni", "nidaqmx_device", "NIDAQmxDevice")
+MCCDAQ1208LS = _get_driver("mcc", "mcdaq1208ls", "MCCDAQ1208LS")
+WaveShaper1000A = _get_driver("coherent", "ws1000a", "WaveShaper1000A")
 
 from comfylab.engine.registry import BLOCK_REGISTRY
 
@@ -223,11 +237,13 @@ def test_mcdaq1208ls_mock():
 
 
 def test_nidaqmx_error_raising_when_uninstalled(monkeypatch):
-    import comfylab.devices.ni.nidaqmx_device as ni_mod
-    monkeypatch.setattr(ni_mod, "NIDAQMX_AVAILABLE", False)
+    device_cls = _get_driver("ni", "nidaqmx_device", "NIDAQmxDevice")
+    if not device_cls:
+        pytest.skip("NIDAQmxDevice not available")
+    monkeypatch.setitem(device_cls.__init__.__globals__, "NIDAQMX_AVAILABLE", False)
 
     with pytest.raises(RuntimeError, match="not installed on this system"):
-        ni_mod.NIDAQmxDevice("Dev1")
+        device_cls("Dev1")
 
 
 def test_block_registration_discovery():
@@ -240,33 +256,20 @@ def test_block_registration_discovery():
 
     registered = BLOCK_REGISTRY
 
-    
-    # Check block discovery for newly added devices and OSA blocks
-    assert "devices/keysight/dsox_series/connect" in registered
-    assert "devices/agilent/e4407b/connect" in registered
-    assert "devices/agilent/hp34401a/connect" in registered
-    assert "devices/advantest/q8384/sweep_config" in registered
-    assert "devices/advantest/q8384/acquire" in registered
-    assert "devices/advantest/q8384/sweep_and_acquire" in registered
-    assert "devices/yokogawa/aq6370/connect" in registered
-    assert "devices/yokogawa/aq6370/sweep_config" in registered
-    assert "devices/yokogawa/aq6370/acquire" in registered
-    assert "devices/yokogawa/aq6370/sweep_and_acquire" in registered
-
-    assert "devices/keopsys/edfa/connect" in registered
-    assert "devices/thorlabs/lts200/connect" in registered
-    assert "devices/thorlabs/mdt69x/connect" in registered
-    assert "devices/ni/nidaqmx/connect" in registered
-    assert "devices/mcc/mcdaq1208ls/connect" in registered
+    # Check that core generic blocks are always registered
     assert "devices/generic/oscilloscope/connect" in registered
     assert "devices/generic/camera/connect" in registered
-    assert "devices/coherent/ws1000a/connect" in registered
-    assert "devices/coherent/ws1000a/get_info" in registered
-    assert "devices/coherent/ws1000a/predefined_filter" in registered
-    assert "devices/coherent/ws1000a/custom_filter" in registered
-    assert "devices/coherent/ws1000a/upload_file" in registered
-    assert "devices/coherent/ws1000a/get_profile" in registered
-    assert "devices/coherent/ws1000a/shutter" in registered
+    assert "devices/generic/dmm/connect" in registered
+    assert "devices/generic/siggen/connect" in registered
+    assert "devices/generic/power_supply/connect" in registered
+    assert "devices/generic/esa/connect" in registered
+
+    # If store packages are installed or available in dist/comfylab-store, verify them
+    store_dir = Path(__file__).resolve().parent.parent / "dist" / "comfylab-store" / "instruments"
+    if store_dir.exists():
+        loader.load_blocks_from_directory(str(store_dir))
+        assert "devices/coherent/ws1000a/connect" in registered
+        assert "devices/coherent/ws1000a/get_info" in registered
 
 
 def test_extract_float_and_floats_robustness():

@@ -10,6 +10,7 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 
+import types
 import os
 import importlib
 import importlib.util
@@ -22,17 +23,46 @@ logger = logging.getLogger("comfylab.blocks.loader")
 def load_module_from_filepath(filepath: str, module_name: str = None):
     """Dynamically imports a Python module from an absolute filesystem path."""
     path_obj = Path(filepath).resolve()
+    pkg_dir = path_obj.parent
+    pkg_dir_str = str(pkg_dir)
+
+    if pkg_dir_str not in sys.path:
+        sys.path.insert(0, pkg_dir_str)
+
     if not module_name:
-        # Generate a unique module name based on filepath hash/name
-        # to avoid name collision in sys.modules
-        module_name = f"comfylab_dynamic_{path_obj.stem}_{hash(str(path_obj)) & 0xffffffff}"
-    
+        # Generate a unique package and module name based on directory and file stem
+        # to allow relative imports (e.g. from .driver import ...) to resolve correctly
+        pkg_name = f"comfylab_pkg_{pkg_dir.name}_{abs(hash(pkg_dir_str)) & 0xffffffff}"
+        if pkg_name not in sys.modules:
+            parent_mod = types.ModuleType(pkg_name)
+            parent_mod.__path__ = [pkg_dir_str]
+            parent_mod.__file__ = str(pkg_dir / "__init__.py")
+            parent_mod.__package__ = pkg_name
+            sys.modules[pkg_name] = parent_mod
+        else:
+            parent_mod = sys.modules[pkg_name]
+
+        module_name = f"{pkg_name}.{path_obj.stem}"
+        pkg_parent = pkg_name
+    else:
+        pkg_parent = module_name.rsplit(".", 1)[0] if "." in module_name else ""
+        parent_mod = sys.modules.get(pkg_parent)
+
+    # If module is already loaded in current lifecycle, reuse it
+    if module_name in sys.modules:
+        return sys.modules[module_name]
+
     spec = importlib.util.spec_from_file_location(module_name, str(path_obj))
     if spec is None or spec.loader is None:
         raise ImportError(f"Could not load spec for module {module_name} at {filepath}")
-        
+
     module = importlib.util.module_from_spec(spec)
+    if pkg_parent:
+        module.__package__ = pkg_parent
     sys.modules[module_name] = module
+    if parent_mod is not None:
+        setattr(parent_mod, path_obj.stem, module)
+
     try:
         spec.loader.exec_module(module)
         return module
@@ -221,6 +251,12 @@ def reload_registry():
     BLOCK_REGISTRY.clear()
     invalidate_schema_cache()
     clear_signature_cache()
+
+    # Clear dynamically loaded modules so they reload and re-register cleanly
+    for mod_name in list(sys.modules.keys()):
+        if mod_name.startswith("comfylab_pkg_") or mod_name.startswith("comfylab_dynamic_"):
+            del sys.modules[mod_name]
+
     load_all_blocks()
     load_all_clusters_deferred(force=True)
 

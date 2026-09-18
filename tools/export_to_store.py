@@ -268,7 +268,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - name: Install cryptography
         run: pip install cryptography
@@ -276,8 +276,9 @@ jobs:
       - name: Validate and Rebuild Catalog
         run: |
           python3 -c '
-          import json, hashlib
+          import json, hashlib, base64
           from pathlib import Path
+          from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
           root = Path(".")
           catalog_file = root / "catalog.json"
@@ -286,9 +287,20 @@ jobs:
               exit(0)
 
           catalog = json.loads(catalog_file.read_text())
-          print(f"Validating {len(catalog.get(\\"packages\\", []))} packages...")
+          packages = catalog.get("packages", [])
+          print(f"Validating {len(packages)} packages...")
+
+          # Verify catalog digital signature
+          pub_key_hex = catalog.get("creator_identity")
+          sig_b64 = catalog.get("signature")
+          if pub_key_hex and sig_b64:
+              clean_catalog = {k: v for k, v in catalog.items() if k not in ("signature", "creator_identity")}
+              canonical = json.dumps(clean_catalog, sort_keys=True, separators=(",", ":")).encode("utf-8")
+              pub_key = Ed25519PublicKey.from_public_bytes(bytes.fromhex(pub_key_hex))
+              pub_key.verify(base64.b64decode(sig_b64), canonical)
+              print("Catalog digital signature verified!")
           
-          for pkg in catalog.get("packages", []):
+          for pkg in packages:
               pkg_dir = root / pkg["path"]
               assert pkg_dir.exists(), f"Missing directory: {pkg_dir}"
               for f, expected_hash in pkg.get("hashes", {}).items():

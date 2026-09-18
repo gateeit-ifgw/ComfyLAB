@@ -79,12 +79,32 @@ class MockVisaResource:
         pass
 
 
+def _get_driver(vendor: str, model: str, class_name: str):
+    try:
+        mod = __import__(f"comfylab.devices.{vendor}.{model}", fromlist=[class_name])
+        return getattr(mod, class_name, None)
+    except ModuleNotFoundError:
+        pass
+    candidates = [
+        Path.home() / ".comfylab" / "store" / "instruments" / vendor / model / "driver.py",
+        Path(__file__).resolve().parent.parent / "dist" / "comfylab-store" / "instruments" / vendor / model / "driver.py",
+    ]
+    for c in candidates:
+        if c.exists():
+            from comfylab.blocks.loader import load_module_from_filepath
+            mod = load_module_from_filepath(str(c))
+            return getattr(mod, class_name, None)
+    return None
+
+
 def test_imports_and_drivers():
     print("Testing Driver imports and methods...")
     mock_dev = MockVisaResource()
 
     # 1. Keithley 2231A
-    from comfylab.devices.keithley.k2231a import Keithley2231A
+    Keithley2231A = _get_driver("keithley", "k2231a", "Keithley2231A")
+    if not Keithley2231A:
+        pytest.skip("Keithley2231A not available")
     k2231 = Keithley2231A(mock_dev)
     k2231.set_channel(1, 5.0, 1.0)
     k2231.set_output(True)
@@ -95,7 +115,7 @@ def test_imports_and_drivers():
     print("  ✓ Keithley2231A driver OK")
 
     # 2. Tektronix MSO24
-    from comfylab.devices.tektronix.mso24 import TektronixMSO24
+    TektronixMSO24 = _get_driver("tektronix", "mso24", "TektronixMSO24")
     mso24 = TektronixMSO24(mock_dev)
     mso24.set_timebase(1e-3, 0.0)
     mso24.set_channel(1, True, 1.0, 0.0, 0.0, "DC")
@@ -106,7 +126,7 @@ def test_imports_and_drivers():
     print("  ✓ TektronixMSO24 driver OK")
 
     # 3. Keysight DSOX 3024A
-    from comfylab.devices.keysight.dsox3024a import KeysightDSOX3024A
+    KeysightDSOX3024A = _get_driver("keysight", "dsox3024a", "KeysightDSOX3024A")
     dsox3024 = KeysightDSOX3024A(mock_dev)
     dsox3024.set_timebase(1e-3, 0.0)
     dsox3024.set_channel(1, True, 1.0, 0.0, "DC", True)
@@ -117,7 +137,7 @@ def test_imports_and_drivers():
     print("  ✓ KeysightDSOX3024A driver OK")
 
     # 4. Agilent 33220A
-    from comfylab.devices.agilent.a33220a import Agilent33220A
+    Agilent33220A = _get_driver("agilent", "a33220a", "Agilent33220A")
     a33220 = Agilent33220A(mock_dev)
     a33220.set_wave("SIN", 1000.0, 2.0, 0.0)
     a33220.set_pulse(1e-3, 1e-4, 1e-8)
@@ -126,7 +146,7 @@ def test_imports_and_drivers():
     print("  ✓ Agilent33220A driver OK")
 
     # 5. Tektronix MDO3040
-    from comfylab.devices.tektronix.mdo3040 import TektronixMDO3040
+    TektronixMDO3040 = _get_driver("tektronix", "mdo3040", "TektronixMDO3040")
     mdo3040 = TektronixMDO3040(mock_dev)
     mdo3040.set_timebase(1e-3, 0.0)
     mdo3040.set_channel(1, True, 1.0, 0.0, 0.0, "DC")
@@ -138,7 +158,7 @@ def test_imports_and_drivers():
     print("  ✓ TektronixMDO3040 driver OK")
 
     # 6. Keysight DSOX 1204A
-    from comfylab.devices.keysight.dsox1204a import KeysightDSOX1204A
+    KeysightDSOX1204A = _get_driver("keysight", "dsox1204a", "KeysightDSOX1204A")
     dsox1204 = KeysightDSOX1204A(mock_dev)
     dsox1204.set_timebase(1e-3, 0.0)
     dsox1204.set_channel(1, True, 1.0, 0.0, "DC", 10.0)
@@ -148,7 +168,7 @@ def test_imports_and_drivers():
     print("  ✓ KeysightDSOX1204A driver OK")
 
     # 7. Horiba VUV Excitation
-    from comfylab.devices.horiba.vuv_excitation import HoribaVUVExcitation
+    HoribaVUVExcitation = _get_driver("horiba", "vuv_excitation", "HoribaVUVExcitation")
     horiba = HoribaVUVExcitation(simulate=True)
     horiba.initialize()
     horiba.set_wavelength(250.0)
@@ -167,7 +187,7 @@ def test_imports_and_drivers():
     print("  ✓ HoribaVUVExcitation driver OK")
 
     # 8. CAEN DT5720B
-    from comfylab.devices.caen.dt5720b import CAENDT5720B
+    CAENDT5720B = _get_driver("caen", "dt5720b", "CAENDT5720B")
     caen = CAENDT5720B(simulate=True)
     caen.open(simulate=True)
     caen.set_record_length(1024)
@@ -183,7 +203,7 @@ def test_imports_and_drivers():
     print("  ✓ CAENDT5720B driver OK")
 
     # 9. Keysight E36234A
-    from comfylab.devices.keysight.e36234a import KeysightE36234A
+    KeysightE36234A = _get_driver("keysight", "e36234a", "KeysightE36234A")
     e36234 = KeysightE36234A(mock_dev)
     e36234.set_channel(1, 12.0, 2.5)
     e36234.set_output(True, 1)
@@ -199,10 +219,13 @@ def test_imports_and_drivers():
 
 def test_registry_loading():
     print("\nTesting Block Registry auto-discovery & loading...")
-    from comfylab.blocks.loader import load_all_blocks
+    from comfylab.blocks.loader import load_all_blocks, load_blocks_from_directory
     from comfylab.engine.registry import BLOCK_REGISTRY
 
     load_all_blocks()
+    store_dir = Path(__file__).resolve().parent.parent / "dist" / "comfylab-store" / "instruments"
+    if store_dir.exists():
+        load_blocks_from_directory(str(store_dir))
 
     expected_block_types = [
         # Keithley 2231A

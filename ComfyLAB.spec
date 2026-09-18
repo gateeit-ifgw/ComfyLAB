@@ -75,6 +75,7 @@ hidden_imports = [
     'backend.routers.workspace',
     'backend.routers.packages',
     'backend.routers.updates',
+    'backend.routers.store',
     'comfylab.engine.config',
     'comfylab.engine.executor',
     'comfylab.engine.lock_manager',

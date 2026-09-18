@@ -45,7 +45,12 @@ def test_horiba_clusters_schema_validation():
 
 def test_horiba_clusters_registration():
     """Validates that all 4 clusters register properly in BLOCK_REGISTRY."""
+    from comfylab.blocks.loader import load_blocks_from_directory
     load_all_blocks()
+    store_dir = src_dir / "dist" / "comfylab-store" / "instruments"
+    if store_dir.exists():
+        load_blocks_from_directory(str(store_dir))
+
     clusters_dir = src_dir / "comfylab" / "clusters"
     expected_types = [
         "builtin/cluster/vuv_setup_instruments",
@@ -121,7 +126,15 @@ def test_horiba_blueprint_schema():
 @pytest.mark.asyncio
 async def test_horiba_blueprint_simulated_execution(tmp_path):
     """Executes the full Horiba VUV spectroscopy blueprint in simulated mode with ExecutionEngine."""
+    from comfylab.blocks.loader import load_blocks_from_directory
     load_all_blocks()
+    store_dir = src_dir / "dist" / "comfylab-store" / "instruments"
+    if store_dir.exists():
+        load_blocks_from_directory(str(store_dir))
+
+    if "devices/horiba/vuv_excitation/connect" not in BLOCK_REGISTRY:
+        pytest.skip("Horiba store package not installed")
+
     clusters_dir = src_dir / "comfylab" / "clusters"
     for c_file in [
         "vuv_setup_instruments.cluster.json",
