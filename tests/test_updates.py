@@ -17,6 +17,7 @@ from backend.routers.updates import (
     is_newer_version,
     parse_version_tuple,
     detect_install_type,
+    extract_pypi_wheel_url,
     _IN_MEMORY_CACHE,
 )
 
@@ -260,3 +261,95 @@ def test_check_updates_prefers_pypi_when_newer(monkeypatch):
             assert data["update_available"] is True
             assert data["current_version"] == "0.4.2"
             assert data["latest_version"] == "0.4.3"
+
+
+def test_extract_pypi_wheel_url():
+    # Empty or None
+    assert extract_pypi_wheel_url(None) is None
+    assert extract_pypi_wheel_url({}) is None
+
+    # Prefer wheel over sdist
+    pypi_data = {
+        "urls": [
+            {"filename": "comfylab-0.6.2.tar.gz", "packagetype": "sdist", "url": "https://files.pythonhosted.org/sdist.tar.gz"},
+            {"filename": "comfylab-0.6.2-py3-none-any.whl", "packagetype": "bdist_wheel", "url": "https://files.pythonhosted.org/wheel.whl"},
+        ]
+    }
+    assert extract_pypi_wheel_url(pypi_data) == "https://files.pythonhosted.org/wheel.whl"
+
+    # Fallback to sdist if no wheel
+    sdist_only = {
+        "urls": [
+            {"filename": "comfylab-0.6.2.tar.gz", "packagetype": "sdist", "url": "https://files.pythonhosted.org/sdist.tar.gz"},
+        ]
+    }
+    assert extract_pypi_wheel_url(sdist_only) == "https://files.pythonhosted.org/sdist.tar.gz"
+
+    # Specific version from releases dict
+    releases_data = {
+        "urls": [],
+        "releases": {
+            "0.6.2": [
+                {"filename": "comfylab-0.6.2-py3-none-any.whl", "packagetype": "bdist_wheel", "url": "https://files.pythonhosted.org/0.6.2.whl"},
+            ]
+        }
+    }
+    assert extract_pypi_wheel_url(releases_data, target_version="0.6.2") == "https://files.pythonhosted.org/0.6.2.whl"
+
+
+@pytest.mark.asyncio
+async def test_apply_update_pip_uses_wheel_url_first(monkeypatch):
+    client = TestClient(app)
+    monkeypatch.setattr("backend.routers.updates.detect_install_type", lambda: "pip")
+
+    executed_cmds = []
+
+    def mock_subprocess(*args, **kwargs):
+        executed_cmds.append(list(args))
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.communicate = AsyncMock(return_value=(b"Successfully installed", b""))
+        return mock_proc
+
+    with patch("asyncio.create_subprocess_exec", side_effect=mock_subprocess):
+        wheel_url = "https://files.pythonhosted.org/packages/comfylab-0.6.2.whl"
+        resp = client.post("/updates/apply", json={
+            "install_type": "pip",
+            "target_version": "0.6.2",
+            "wheel_url": wheel_url,
+        })
+        assert resp.status_code == 200
+        assert len(executed_cmds) == 1
+        assert wheel_url in executed_cmds[0]
+
+
+@pytest.mark.asyncio
+async def test_apply_update_pip_falls_back_when_wheel_url_fails(monkeypatch):
+    client = TestClient(app)
+    monkeypatch.setattr("backend.routers.updates.detect_install_type", lambda: "pip")
+
+    executed_cmds = []
+
+    def mock_subprocess(*args, **kwargs):
+        executed_cmds.append(list(args))
+        mock_proc = MagicMock()
+        # First command (wheel url) fails, second command (fallback pkg_spec) succeeds
+        if len(executed_cmds) == 1:
+            mock_proc.returncode = 1
+            mock_proc.communicate = AsyncMock(return_value=(b"", b"Failed to fetch wheel"))
+        else:
+            mock_proc.returncode = 0
+            mock_proc.communicate = AsyncMock(return_value=(b"Successfully installed comfylab-0.6.2", b""))
+        return mock_proc
+
+    with patch("asyncio.create_subprocess_exec", side_effect=mock_subprocess):
+        wheel_url = "https://files.pythonhosted.org/packages/comfylab-0.6.2.whl"
+        resp = client.post("/updates/apply", json={
+            "install_type": "pip",
+            "target_version": "0.6.2",
+            "wheel_url": wheel_url,
+        })
+        assert resp.status_code == 200
+        assert len(executed_cmds) == 2
+        assert wheel_url in executed_cmds[0]
+        assert "comfylab>=0.6.2" in executed_cmds[1]

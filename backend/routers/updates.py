@@ -214,16 +214,50 @@ async def fetch_github_release_info(timeout: float = 5.0) -> Dict[str, Any]:
             raise HTTPException(status_code=resp.status_code, detail=f"GitHub API returned HTTP {resp.status_code}")
 
 
-async def fetch_pypi_release_info(timeout: float = 5.0) -> Optional[Dict[str, Any]]:
-    """Fetches latest release info from PyPI JSON API."""
+async def fetch_pypi_release_info(version: Optional[str] = None, timeout: float = 5.0) -> Optional[Dict[str, Any]]:
+    """Fetches latest (or specific version) release info from PyPI JSON API."""
+    url = f"https://pypi.org/pypi/comfylab/{version}/json" if version else PYPI_API_URL
     try:
         async with httpx.AsyncClient(timeout=timeout) as client:
-            resp = await client.get(PYPI_API_URL, headers={"User-Agent": "ComfyLAB-UpdateChecker"})
+            resp = await client.get(url, headers={"User-Agent": "ComfyLAB-UpdateChecker"})
             if resp.status_code == 200:
                 return resp.json()
     except Exception as e:
-        logger.debug(f"Failed to fetch PyPI release info: {e}")
+        logger.debug(f"Failed to fetch PyPI release info from {url}: {e}")
     return None
+
+
+def extract_pypi_wheel_url(pypi_data: Optional[Dict[str, Any]], target_version: Optional[str] = None) -> Optional[str]:
+    """
+    Extracts the direct download URL for a wheel or sdist from PyPI JSON response.
+    Prefers wheel (.whl) over sdist (.tar.gz / .zip).
+    """
+    if not pypi_data:
+        return None
+
+    urls = []
+    # If target_version specified and exists under releases, check releases[target_version]
+    if target_version and "releases" in pypi_data and target_version in pypi_data["releases"]:
+        urls = pypi_data["releases"][target_version]
+    elif "urls" in pypi_data and pypi_data["urls"]:
+        urls = pypi_data["urls"]
+
+    wheel_url = None
+    sdist_url = None
+    for item in urls:
+        filename = item.get("filename", "")
+        pkg_type = item.get("packagetype", "")
+        url = item.get("url")
+        if not url:
+            continue
+        if pkg_type == "bdist_wheel" or filename.endswith(".whl"):
+            wheel_url = url
+            break
+        elif pkg_type == "sdist" or filename.endswith(".tar.gz") or filename.endswith(".zip"):
+            if not sdist_url:
+                sdist_url = url
+
+    return wheel_url or sdist_url
 
 
 @router.get("/check")
@@ -293,9 +327,11 @@ async def check_updates(force: bool = Query(False)) -> Dict[str, Any]:
                 asset_size = asset.get("size", 0)
                 break
 
+    pypi_wheel_url = None
     # If PyPI reports a newer version, use PyPI version info
     if pypi_release:
         pypi_version = pypi_release.get("info", {}).get("version", "")
+        pypi_wheel_url = extract_pypi_wheel_url(pypi_release, pypi_version)
         if is_newer_version(pypi_version, latest_version):
             latest_version = pypi_version
             raw_tag = f"v{pypi_version}"
@@ -304,15 +340,8 @@ async def check_updates(force: bool = Query(False)) -> Dict[str, Any]:
             if not release_notes or not raw_release:
                 release_notes = pypi_release.get("info", {}).get("summary", "") or f"Release v{pypi_version} available on PyPI."
 
-    # Find portable release zip asset if present
-    asset_url = None
-    asset_size = 0
-    for asset in raw_release.get("assets", []):
-        asset_name = asset.get("name", "")
-        if asset_name.endswith(".zip") and "release" in asset_name.lower():
-            asset_url = asset.get("browser_download_url")
-            asset_size = asset.get("size", 0)
-            break
+    if not pypi_wheel_url and pypi_release:
+        pypi_wheel_url = extract_pypi_wheel_url(pypi_release, latest_version)
 
     update_available = is_newer_version(latest_version, current_version)
 
@@ -328,6 +357,7 @@ async def check_updates(force: bool = Query(False)) -> Dict[str, Any]:
         "published_at": published_at,
         "asset_url": asset_url,
         "asset_size": asset_size,
+        "pypi_wheel_url": pypi_wheel_url,
         "install_type": install_type,
         "from_cache": False,
     }
@@ -339,13 +369,14 @@ async def check_updates(force: bool = Query(False)) -> Dict[str, Any]:
 class ApplyUpdatePayload(BaseModel):
     install_type: Optional[str] = None
     target_version: Optional[str] = None
+    wheel_url: Optional[str] = None
 
 
 @router.post("/apply")
 async def apply_update(payload: Optional[ApplyUpdatePayload] = None) -> Dict[str, Any]:
     """
     Applies an available update depending on the detected install type:
-    - pip: executes 'pip install --upgrade --no-cache-dir comfylab>=target_version'
+    - pip: executes 'pip install --upgrade --no-cache-dir <wheel_url|comfylab>=target_version>'
     - portable_zip: downloads and extracts the release archive over the application root
     - standalone / git: returns error explaining that manual update is required
     """
@@ -354,44 +385,68 @@ async def apply_update(payload: Optional[ApplyUpdatePayload] = None) -> Dict[str
 
     if req_type == "pip":
         target_version = payload.target_version if payload and payload.target_version else None
-        if not target_version:
-            cached = load_cached_update_info()
-            if cached and cached.get("latest_version"):
-                target_version = cached.get("latest_version")
+        cached = load_cached_update_info()
+        if not target_version and cached and cached.get("latest_version"):
+            target_version = cached.get("latest_version")
 
+        # Determine wheel URL to bypass PyPI Simple Index CDN cache lag
+        wheel_url = payload.wheel_url if payload and payload.wheel_url else None
+        if not wheel_url and cached:
+            cached_wheel = cached.get("pypi_wheel_url")
+            if cached_wheel and (not target_version or target_version in cached_wheel):
+                wheel_url = cached_wheel
+
+        # If wheel_url not known yet, try fetching it directly from PyPI JSON API
+        if not wheel_url:
+            pypi_info = await fetch_pypi_release_info(version=target_version)
+            if pypi_info:
+                wheel_url = extract_pypi_wheel_url(pypi_info, target_version)
+
+        # Primary attempt: install directly from PyPI wheel URL if available.
+        # This completely bypasses Fastly CDN edge caching delays on the Simple Index (PEP 503/691).
+        candidates = []
+        if wheel_url:
+            candidates.append(wheel_url)
+
+        # Fallback candidate: package name specifier
         pkg_spec = f"comfylab>={target_version}" if target_version else "comfylab"
-        cmd = [sys.executable, "-m", "pip", "install", "--upgrade", "--no-cache-dir", pkg_spec]
-        logger.info(f"Applying update via pip: {' '.join(cmd)}")
-        try:
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=300.0)
-            stdout_text = stdout.decode().strip()
-            stderr_text = stderr.decode().strip()
-            if process.returncode == 0:
-                logger.info(f"ComfyLAB upgraded successfully via pip: {stdout_text}")
-                clear_cached_update_info()
-                return {
-                    "status": "success",
-                    "install_type": "pip",
-                    "message": "ComfyLAB was upgraded successfully via pip! Please restart the application to apply changes.",
-                    "output": stdout_text
-                }
-            else:
-                err_msg = stderr_text or stdout_text
-                logger.error(f"pip install failed (code {process.returncode}): {err_msg}")
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Failed to update via pip (code {process.returncode}): {err_msg}"
+        candidates.append(pkg_spec)
+
+        last_error = None
+        for target in candidates:
+            cmd = [sys.executable, "-m", "pip", "install", "--upgrade", "--no-cache-dir", target]
+            logger.info(f"Applying update via pip (target: '{target}'): {' '.join(cmd)}")
+            try:
+                process = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
                 )
-        except asyncio.TimeoutError:
-            raise HTTPException(status_code=504, detail="pip upgrade timed out after 5 minutes.")
-        except Exception as e:
-            logger.error(f"Failed to execute pip update: {e}")
-            raise HTTPException(status_code=500, detail=f"Failed to execute pip update: {e}")
+                stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=300.0)
+                stdout_text = stdout.decode().strip()
+                stderr_text = stderr.decode().strip()
+                if process.returncode == 0:
+                    logger.info(f"ComfyLAB upgraded successfully via pip with target '{target}': {stdout_text}")
+                    clear_cached_update_info()
+                    return {
+                        "status": "success",
+                        "install_type": "pip",
+                        "message": "ComfyLAB was upgraded successfully via pip! Please restart the application to apply changes.",
+                        "output": stdout_text
+                    }
+                else:
+                    last_error = stderr_text or stdout_text
+                    logger.warning(f"pip install failed for target '{target}' (code {process.returncode}): {last_error}")
+            except asyncio.TimeoutError:
+                raise HTTPException(status_code=504, detail="pip upgrade timed out after 5 minutes.")
+            except Exception as e:
+                logger.error(f"Failed to execute pip update with target '{target}': {e}")
+                last_error = str(e)
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to update via pip: {last_error}"
+        )
 
     elif req_type == "portable_zip":
         logger.info("Applying update via portable release ZIP...")
@@ -401,11 +456,12 @@ async def apply_update(payload: Optional[ApplyUpdatePayload] = None) -> Dict[str
 
         if not asset_url:
             raw_release = await fetch_github_release_info()
-            for asset in raw_release.get("assets", []):
-                asset_name = asset.get("name", "")
-                if asset_name.endswith(".zip") and "release" in asset_name.lower():
-                    asset_url = asset.get("browser_download_url")
-                    break
+            if raw_release:
+                for asset in raw_release.get("assets", []):
+                    asset_name = asset.get("name", "")
+                    if asset_name.endswith(".zip") and "release" in asset_name.lower():
+                        asset_url = asset.get("browser_download_url")
+                        break
 
         if not asset_url:
             raise HTTPException(

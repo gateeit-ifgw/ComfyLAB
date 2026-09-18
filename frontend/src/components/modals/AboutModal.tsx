@@ -15,6 +15,7 @@ export interface UpdateInfo {
   published_at?: string;
   asset_url?: string;
   asset_size?: number;
+  pypi_wheel_url?: string;
   install_type?: string;
   from_cache?: boolean;
   network_warning?: string;
@@ -124,7 +125,8 @@ export const AboutModal: React.FC<AboutModalProps> = ({ onClose, updateInfo: ini
       const BACKEND_URL = getBackendUrls().http;
       const res = await axios.post(`${BACKEND_URL}/updates/apply`, {
         install_type: updateInfo.install_type,
-        target_version: updateInfo.latest_version
+        target_version: updateInfo.latest_version,
+        wheel_url: updateInfo.pypi_wheel_url
       });
       if (res.data && res.data.status === 'success') {
         setUpdateSuccessMsg(res.data.message || t('aboutModal.updateSuccess', 'ComfyLAB was updated successfully!'));
