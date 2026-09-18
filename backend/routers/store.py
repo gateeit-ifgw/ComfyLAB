@@ -17,7 +17,7 @@ import shutil
 import hashlib
 import logging
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Sequence, Set
 
 import httpx
 from fastapi import APIRouter, HTTPException, Query
@@ -32,7 +32,7 @@ from comfylab.engine.config import (
     get_store_catalog_cache_file,
     DEFAULT_STORE_URL,
 )
-from comfylab.engine.security import sign_python_file, evaluate_trust, verify_python_file
+from comfylab.engine.security import sign_python_file, sign_json, evaluate_trust, verify_python_file, verify_json
 from comfylab.blocks.loader import reload_registry
 
 logger = logging.getLogger("backend.routers.store")
@@ -55,6 +55,10 @@ class SubscribePayload(BaseModel):
 
 class InstallPayload(BaseModel):
     package_ids: List[str]
+
+
+class ResolveBlocksPayload(BaseModel):
+    block_types: List[str]
 
 
 class UninstallPayload(BaseModel):
@@ -217,6 +221,57 @@ def matches_subscription(pkg: Dict[str, Any], sub: Dict[str, Any]) -> bool:
     return False
 
 
+def resolve_package_dependencies(
+    package_ids: Sequence[str],
+    catalog: Dict[str, Any],
+    installed_ids: Optional[Set[str]] = None,
+    include_already_installed: bool = False
+) -> List[Dict[str, Any]]:
+    """
+    Recursively resolves dependencies for a given list of package IDs.
+    Returns a topologically sorted list of package metadata dictionaries
+    where dependencies always precede the packages that depend on them.
+    Detects and prevents cyclic dependencies.
+    """
+    pkg_by_id = {p["id"]: p for p in catalog.get("packages", []) if "id" in p}
+    installed = installed_ids if installed_ids is not None else set(load_installed().keys())
+
+    visited: Set[str] = set()
+    visiting: Set[str] = set()
+    resolved_order: List[Dict[str, Any]] = []
+
+    def dfs(pkg_id: str, path: List[str]):
+        if pkg_id in visiting:
+            cycle_str = " -> ".join(path + [pkg_id])
+            logger.warning(f"Cyclic dependency detected in Store packages: {cycle_str}")
+            return
+        if pkg_id in visited:
+            return
+
+        if pkg_id not in pkg_by_id:
+            logger.warning(f"Dependency package '{pkg_id}' not found in Store catalog.")
+            return
+
+        visiting.add(pkg_id)
+        pkg_obj = pkg_by_id[pkg_id]
+        deps = pkg_obj.get("dependencies", []) or []
+
+        for dep_id in deps:
+            dfs(dep_id, path + [pkg_id])
+
+        visiting.remove(pkg_id)
+        visited.add(pkg_id)
+
+        # Include if not already installed, or if include_already_installed is True, or explicitly requested
+        if include_already_installed or (pkg_id not in installed) or (pkg_id in package_ids):
+            resolved_order.append(pkg_obj)
+
+    for pid in package_ids:
+        dfs(pid, [])
+
+    return resolved_order
+
+
 # ---------------------------------------------------------------------------
 # Package Installation & File Writing
 # ---------------------------------------------------------------------------
@@ -256,9 +311,20 @@ async def download_and_install_package(pkg: Dict[str, Any]) -> Dict[str, Any]:
             target_file.parent.mkdir(parents=True, exist_ok=True)
             target_file.write_bytes(content)
 
-            # Authorize and sign any downloaded python file with the local host key
+            # Verify if downloaded file is signed by a valid/trusted identity; if not, authorize with local key
             if filename.endswith(".py"):
-                sign_python_file(target_file)
+                ident, is_valid = verify_python_file(target_file)
+                if not is_valid:
+                    sign_python_file(target_file)
+            elif filename.endswith(".cluster.json") or (filename.endswith(".json") and "manifest" not in filename and "catalog" not in filename):
+                try:
+                    data = json.loads(target_file.read_text(encoding="utf-8"))
+                    ident, is_valid = verify_json(data)
+                    if not is_valid:
+                        signed_data = sign_json(data)
+                        target_file.write_text(json.dumps(signed_data, indent=2), encoding="utf-8")
+                except Exception as e:
+                    logger.warning(f"Could not verify/sign json file {target_file}: {e}")
 
             downloaded_files.append(filename)
 
@@ -273,6 +339,7 @@ async def download_and_install_package(pkg: Dict[str, Any]) -> Dict[str, Any]:
         "type": pkg.get("type", "instrument"),
         "path": rel_path,
         "files": downloaded_files,
+        "dependencies": pkg.get("dependencies", []),
         "installed_at": time.time()
     }
     save_installed(installed)
@@ -406,22 +473,115 @@ async def update_settings(payload: StoreSettingsPayload):
     return {"status": "success", "settings": subs_obj}
 
 
+@router.get("/dependencies")
+async def get_dependencies(package_ids: List[str] = Query(...)):
+    """Resolves and returns the transitive dependencies for a set of package IDs."""
+    catalog_data = await fetch_store_catalog(force=False)
+    installed_ids = set(load_installed().keys())
+    resolved = resolve_package_dependencies(
+        package_ids,
+        catalog_data,
+        installed_ids=installed_ids,
+        include_already_installed=True
+    )
+    req_set = set(package_ids)
+    direct_deps = [p for p in resolved if p["id"] not in req_set]
+    missing_deps = [p for p in direct_deps if p["id"] not in installed_ids]
+
+    return {
+        "requested": package_ids,
+        "all_dependencies": direct_deps,
+        "missing_dependencies": missing_deps,
+        "install_order": [p["id"] for p in resolved]
+    }
+
+
+@router.post("/resolve_blocks")
+async def resolve_missing_blocks(payload: ResolveBlocksPayload):
+    """
+    Given a list of missing block types, matches them against available Store packages
+    and returns required packages with all transitive dependencies.
+    """
+    catalog_data = await fetch_store_catalog(force=False)
+    packages = catalog_data.get("packages", [])
+    installed_ids = set(load_installed().keys())
+
+    matched_package_ids = set()
+    unresolved_blocks = []
+
+    for b_type in payload.block_types:
+        found_pkg = None
+        # 1. Direct match on 'provides' in catalog
+        for pkg in packages:
+            provides = pkg.get("provides") or []
+            if b_type in provides:
+                found_pkg = pkg["id"]
+                break
+
+        # 2. Heuristic for instrument blocks: devices/{vendor}/{model}/...
+        if not found_pkg and b_type.startswith("devices/"):
+            parts = b_type.split("/")
+            if len(parts) >= 3:
+                vendor, model = parts[1], parts[2]
+                cand_id = f"instruments/{vendor}/{model}"
+                if any(p["id"] == cand_id for p in packages):
+                    found_pkg = cand_id
+
+        # 3. Heuristic for clusters: builtin/cluster/{cluster_name} or cluster/{cluster_name}
+        if not found_pkg and ("cluster" in b_type):
+            cluster_name = b_type.split("/")[-1]
+            for pkg in packages:
+                if pkg.get("type") == "cluster":
+                    if any(cluster_name in f for f in pkg.get("files", [])) or cluster_name in pkg.get("id", ""):
+                        found_pkg = pkg["id"]
+                        break
+
+        if found_pkg:
+            matched_package_ids.add(found_pkg)
+        else:
+            unresolved_blocks.append(b_type)
+
+    # Resolve all dependencies for the matched packages
+    to_install = resolve_package_dependencies(
+        list(matched_package_ids),
+        catalog_data,
+        installed_ids=installed_ids,
+        include_already_installed=False
+    )
+
+    return {
+        "matched_packages": [p for p in packages if p["id"] in matched_package_ids],
+        "to_install": to_install,
+        "unresolved_blocks": unresolved_blocks
+    }
+
+
 @router.post("/install")
 async def install_packages(payload: InstallPayload):
-    """Downloads and installs specified package IDs from the Store."""
+    """Downloads and installs specified package IDs and their dependencies from the Store."""
     catalog_data = await fetch_store_catalog(force=False)
     packages = catalog_data.get("packages", [])
     pkg_by_id = {p["id"]: p for p in packages if "id" in p}
+    installed_ids = set(load_installed().keys())
 
-    installed_results = []
     errors = []
-
     for pkg_id in payload.package_ids:
         if pkg_id not in pkg_by_id:
             errors.append(f"Package '{pkg_id}' not found in Store catalog.")
-            continue
+
+    # Resolve dependencies topologically
+    to_install_pkgs = resolve_package_dependencies(
+        payload.package_ids,
+        catalog_data,
+        installed_ids=installed_ids,
+        include_already_installed=False
+    )
+
+    installed_results = []
+    for pkg_obj in to_install_pkgs:
+        pkg_id = pkg_obj["id"]
         try:
-            res = await download_and_install_package(pkg_by_id[pkg_id])
+            res = await download_and_install_package(pkg_obj)
             installed_results.append(res)
         except Exception as e:
             logger.error(f"Error installing package {pkg_id}: {e}")

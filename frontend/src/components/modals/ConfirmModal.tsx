@@ -53,7 +53,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           <button className="modal-close-btn" onClick={onCancel}>✕</button>
         </div>
         <div className="modal-body" style={{ padding: '24px 20px', lineHeight: '1.5' }}>
-          <p style={{ margin: 0, color: 'var(--text-color)' }}>{message}</p>
+          <p style={{ margin: 0, color: 'var(--text-color)', whiteSpace: 'pre-wrap' }}>{message}</p>
         </div>
         <div className="modal-footer" style={{ padding: '16px 20px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
           <button 

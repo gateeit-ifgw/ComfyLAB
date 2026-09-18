@@ -3037,6 +3037,50 @@ return {
     URL.revokeObjectURL(url);
     setIsDirty(false);
   }, [currentBlueprintName, getSavePayload, saveCurrentClusterEdits]);
+  const checkMissingStoreBlocks = async (blocksList: any[]) => {
+    if (!blocksList || !Array.isArray(blocksList) || blocksList.length === 0) return;
+    const reg = registryRef.current || blockRegistry || {};
+    const missingTypes = new Set<string>();
+
+    blocksList.forEach((b: any) => {
+      const action = b.data?.action || b.type;
+      if (action && !reg[action] && action !== 'actionNode' && !action.startsWith('custom/')) {
+        missingTypes.add(action);
+      }
+    });
+
+    if (missingTypes.size === 0) return;
+
+    try {
+      const res = await axios.post(`${BACKEND_URL}/store/resolve_blocks`, {
+        block_types: Array.from(missingTypes)
+      });
+
+      const toInstall = res.data.to_install || [];
+      if (toInstall.length > 0) {
+        const pkgNames = toInstall.map((p: any) => `• ${p.name || p.id} (${p.type})`).join('\n');
+        const confirmMsg = `${t('app.missingStorePackagesTitle', 'This blueprint requires components from the ComfyLAB Store:')}\n\n${pkgNames}\n\n${t('app.missingStorePackagesPrompt', 'Would you like to install them and their dependencies automatically now?')}`;
+
+        const confirmed = await confirmAsync(confirmMsg);
+        if (confirmed) {
+          const pkgIds = toInstall.map((p: any) => p.id);
+          const installRes = await axios.post(`${BACKEND_URL}/store/install`, { package_ids: pkgIds });
+          if (installRes.data.status === 'success' || installRes.data.status === 'partial_success') {
+            await fetchRegistry();
+            await alertAsync(
+              t('app.storePackagesInstalled', 'Required Store packages and dependencies installed successfully!'),
+              '🛍️ ComfyLAB Store'
+            );
+          } else {
+            setErrorMessage(installRes.data.errors?.join(', ') || 'Failed to install some required packages.');
+          }
+        }
+      }
+    } catch (err: any) {
+      console.debug('Failed to resolve missing blocks from store:', err);
+    }
+  };
+
   const loadBlueprintData = (payload: any, filename: string, isExample: boolean = false) => {
     const restoredNodes = payload.blocks.map((block: any) => ({
       ...block,
@@ -3084,6 +3128,9 @@ return {
     }
 
     fetchRegistry();
+    setTimeout(() => {
+      checkMissingStoreBlocks(payload.blocks);
+    }, 200);
   };
 
 

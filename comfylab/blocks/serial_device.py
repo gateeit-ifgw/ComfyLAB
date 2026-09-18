@@ -113,6 +113,7 @@ class ManagedSerialDevice:
         timeout: float = 2.0,
         dtr: Optional[bool] = None,
         rts: Optional[bool] = None,
+        read_delay_ms: float = 0.0,
     ):
         self.port = normalize_serial_port(port)
         self.baudrate = int(baudrate)
@@ -125,6 +126,7 @@ class ManagedSerialDevice:
         self.timeout = float(timeout)
         self.dtr_val = dtr
         self.rts_val = rts
+        self.read_delay_ms = float(read_delay_ms) if read_delay_ms is not None else 0.0
 
         self._ser: Optional[serial.Serial] = None
         self._open()
@@ -246,6 +248,9 @@ class ManagedSerialDevice:
         if self._ser is None or not self._ser.is_open:
             raise ConnectionError(f"Serial port {self.port} is not open.")
 
+        if self.read_delay_ms > 0:
+            time.sleep(self.read_delay_ms / 1000.0)
+
         term_bytes = self.read_termination.encode("utf-8", errors="replace") if self.read_termination else b"\n"
         try:
             raw = self._ser.read_until(expected=term_bytes)
@@ -264,6 +269,9 @@ class ManagedSerialDevice:
         """Reads raw bytes directly from the serial port."""
         if self._ser is None or not self._ser.is_open:
             raise ConnectionError(f"Serial port {self.port} is not open.")
+
+        if self.read_delay_ms > 0:
+            time.sleep(self.read_delay_ms / 1000.0)
 
         try:
             if size is not None and size > 0:
@@ -357,6 +365,7 @@ class SerialDeviceBlock(BaseBlock):
         DataIn("ReadTermination", type_hint=str, default="\n", widget="text", optional=True),
         DataIn("WriteTermination", type_hint=str, default="\n", widget="text", optional=True),
         DataIn("Timeout", type_hint=float, default=2.0, widget="number", optional=True),
+        DataIn("ReadDelayMs", type_hint=float, default=0.0, widget="number", optional=True),
         DataIn("DTR", type_hint=bool, default=True, widget="toggle", optional=True),
         DataIn("RTS", type_hint=bool, default=True, widget="toggle", optional=True),
     ]
@@ -383,6 +392,7 @@ class SerialDeviceBlock(BaseBlock):
                 "ReadTermination": "Terminação de Leitura",
                 "WriteTermination": "Terminação de Escrita",
                 "Timeout": "Tempo Limite",
+                "ReadDelayMs": "Atraso de Leitura (ms)",
                 "DTR": "DTR",
                 "RTS": "RTS",
                 "Out": "Saída",
@@ -404,6 +414,7 @@ class SerialDeviceBlock(BaseBlock):
                 "ReadTermination": "Terminación de Lectura",
                 "WriteTermination": "Terminación de Escritura",
                 "Timeout": "Tiempo de Espera",
+                "ReadDelayMs": "Retardo de Lectura (ms)",
                 "DTR": "DTR",
                 "RTS": "RTS",
                 "Out": "Salida",
@@ -420,6 +431,8 @@ class SerialDeviceBlock(BaseBlock):
     async def execute(self, context: ExecutionContext, trigger_pin: str) -> Optional[str]:
         port = await context.pull(self.id, "Port")
         if not port:
+            port = await context.pull(self.id, "Address")
+        if not port:
             raise ValueError("No port specified for Serial Device block.")
 
         baud = await context.pull(self.id, "BaudRate") or 115200
@@ -430,6 +443,8 @@ class SerialDeviceBlock(BaseBlock):
         read_term = await context.pull(self.id, "ReadTermination")
         write_term = await context.pull(self.id, "WriteTermination")
         timeout = await context.pull(self.id, "Timeout")
+        read_delay = await context.pull(self.id, "ReadDelayMs")
+        read_delay_ms = float(read_delay) if read_delay is not None else 0.0
         dtr = await context.pull(self.id, "DTR")
         rts = await context.pull(self.id, "RTS")
 
@@ -469,6 +484,7 @@ class SerialDeviceBlock(BaseBlock):
                 timeout=timeout_sec,
                 dtr=dtr,
                 rts=rts,
+                read_delay_ms=read_delay_ms,
             )
 
         return "Out"

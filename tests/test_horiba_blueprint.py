@@ -20,9 +20,23 @@ from comfylab.blocks.loader import load_all_blocks
 from comfylab.engine.executor import ExecutionEngine
 
 
+def _get_horiba_clusters_dir() -> Path:
+    store_c_dir = src_dir / "dist" / "comfylab-store" / "clusters" / "horiba" / "vuv_spectroscopy"
+    if store_c_dir.exists():
+        return store_c_dir
+    return src_dir / "comfylab" / "clusters"
+
+
+def _get_horiba_blueprint_path() -> Path:
+    store_bp = src_dir / "dist" / "comfylab-store" / "blueprints" / "horiba" / "vuv_spectroscopy" / "Horiba_H20_UVL_Spectroscopy.json"
+    if store_bp.exists():
+        return store_bp
+    return src_dir / "comfylab" / "examples" / "Horiba_H20_UVL_Spectroscopy.json"
+
+
 def test_horiba_clusters_schema_validation():
     """Validates that all 4 Horiba VUV cluster JSON files conform to ClusterDefinitionModel schema."""
-    clusters_dir = src_dir / "comfylab" / "clusters"
+    clusters_dir = _get_horiba_clusters_dir()
     expected_clusters = [
         "vuv_setup_instruments.cluster.json",
         "vuv_measure_point.cluster.json",
@@ -51,7 +65,7 @@ def test_horiba_clusters_registration():
     if store_dir.exists():
         load_blocks_from_directory(str(store_dir))
 
-    clusters_dir = src_dir / "comfylab" / "clusters"
+    clusters_dir = _get_horiba_clusters_dir()
     expected_types = [
         "builtin/cluster/vuv_setup_instruments",
         "builtin/cluster/vuv_measure_point",
@@ -80,7 +94,7 @@ def test_horiba_clusters_registration():
 
 def test_horiba_blueprint_schema():
     """Validates that Horiba_H20_UVL_Spectroscopy.json is a valid ComfyLAB canvas blueprint."""
-    bp_path = src_dir / "comfylab" / "examples" / "Horiba_H20_UVL_Spectroscopy.json"
+    bp_path = _get_horiba_blueprint_path()
     assert bp_path.exists(), f"Blueprint file does not exist at {bp_path}"
 
     with open(bp_path, "r", encoding="utf-8") as f:
@@ -135,7 +149,7 @@ async def test_horiba_blueprint_simulated_execution(tmp_path):
     if "devices/horiba/vuv_excitation/connect" not in BLOCK_REGISTRY:
         pytest.skip("Horiba store package not installed")
 
-    clusters_dir = src_dir / "comfylab" / "clusters"
+    clusters_dir = _get_horiba_clusters_dir()
     for c_file in [
         "vuv_setup_instruments.cluster.json",
         "vuv_measure_point.cluster.json",
@@ -147,7 +161,7 @@ async def test_horiba_blueprint_simulated_execution(tmp_path):
         cluster_def = ClusterDefinitionModel.model_validate(data)
         register_cluster_block(cluster_def)
 
-    bp_path = src_dir / "comfylab" / "examples" / "Horiba_H20_UVL_Spectroscopy.json"
+    bp_path = _get_horiba_blueprint_path()
     with open(bp_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 

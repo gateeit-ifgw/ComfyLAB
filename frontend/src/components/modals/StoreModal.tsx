@@ -30,6 +30,8 @@ interface PackageItem {
   path: string;
   files?: string[];
   hashes?: Record<string, string>;
+  dependencies?: string[];
+  provides?: string[];
 }
 
 interface CatalogData {
@@ -181,7 +183,11 @@ export const StoreModal: React.FC<StoreModalProps> = ({ onClose, onRefreshRegist
     try {
       const res = await axios.post(`${BACKEND_URL}/store/install`, { package_ids: [pkgId] });
       if (res.data.status === 'success' || res.data.status === 'partial_success') {
-        setMessage({ type: 'success', text: `Installed ${pkgId} successfully!` });
+        const count = res.data.installed?.length || 1;
+        const msg = count > 1
+          ? `Installed ${pkgId} and ${count - 1} dependencies successfully!`
+          : `Installed ${pkgId} successfully!`;
+        setMessage({ type: 'success', text: msg });
         await loadData();
         if (onRefreshRegistry) onRefreshRegistry();
       } else {
@@ -278,8 +284,8 @@ export const StoreModal: React.FC<StoreModalProps> = ({ onClose, onRefreshRegist
 
   return (
     <div
-      className="modal-backdrop"
-      style={{ zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      className="modal-overlay"
+      style={{ zIndex: 10000 }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -289,7 +295,8 @@ export const StoreModal: React.FC<StoreModalProps> = ({ onClose, onRefreshRegist
         style={{
           maxWidth: '900px',
           width: '95%',
-          maxHeight: '88vh',
+          height: '85vh',
+          minHeight: '520px',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
@@ -586,6 +593,25 @@ export const StoreModal: React.FC<StoreModalProps> = ({ onClose, onRefreshRegist
                               <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.4', maxHeight: '56px', overflow: 'hidden' }}>
                                 {pkg.description}
                               </p>
+                              {pkg.dependencies && pkg.dependencies.length > 0 && (
+                                <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                                  <span
+                                    style={{
+                                      fontSize: '0.7rem',
+                                      background: 'rgba(168, 85, 247, 0.15)',
+                                      color: '#c084fc',
+                                      padding: '2px 6px',
+                                      borderRadius: '4px',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '3px'
+                                    }}
+                                    title={`Dependencies:\n${pkg.dependencies.join('\n')}`}
+                                  >
+                                    🔗 {pkg.dependencies.length} {pkg.dependencies.length === 1 ? 'dependency' : 'dependencies'}
+                                  </span>
+                                </div>
+                              )}
                             </div>
 
                             <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

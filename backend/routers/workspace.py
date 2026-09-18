@@ -149,37 +149,75 @@ def get_examples_dir() -> Path:
 
 @router.get("/workspace/examples")
 async def list_example_blueprints():
-    """Lists all built-in example blueprint JSON files."""
+    """Lists all built-in example blueprint JSON files and installed Store blueprints."""
     examples_dir = get_examples_dir()
 
-    if not examples_dir.exists():
-        return {"examples": []}
-
     examples = []
-    for f in sorted(examples_dir.glob("*.json")):
-        examples.append({
-            "filename": f.name,
-            "path": str(f),
-            "size": f.stat().st_size,
-            "modified": f.stat().st_mtime
-        })
+    seen_names = set()
+
+    if examples_dir.exists():
+        for f in sorted(examples_dir.glob("*.json")):
+            seen_names.add(f.name)
+            examples.append({
+                "filename": f.name,
+                "path": str(f),
+                "size": f.stat().st_size,
+                "modified": f.stat().st_mtime,
+                "source": "core"
+            })
+
+    # Also list installed Store blueprints
+    try:
+        from comfylab.engine.config import get_store_dir
+        store_bp_dir = get_store_dir() / "blueprints"
+        if store_bp_dir.exists():
+            for f in sorted(store_bp_dir.rglob("*.json")):
+                if f.name == "manifest.json" or f.name in seen_names:
+                    continue
+                seen_names.add(f.name)
+                examples.append({
+                    "filename": f.name,
+                    "path": str(f),
+                    "size": f.stat().st_size,
+                    "modified": f.stat().st_mtime,
+                    "source": "store"
+                })
+    except Exception as e:
+        logger.debug(f"Error checking store blueprints: {e}")
+
     return {"examples": examples}
 
 
 @router.get("/workspace/examples/{filename:path}")
 async def load_example_blueprint(filename: str):
-    """Loads a specific built-in example blueprint JSON file."""
+    """Loads a specific built-in example blueprint or installed Store blueprint JSON file."""
     examples_dir = get_examples_dir()
 
     if not filename.endswith(".json"):
         filename += ".json"
 
+    file_path = None
     try:
-        file_path = resolve_within(examples_dir, filename)
+        cand_path = resolve_within(examples_dir, filename)
+        if cand_path.exists():
+            file_path = cand_path
     except ValueError:
-        raise HTTPException(status_code=403, detail="Access denied: invalid filename.")
+        pass
 
-    if not file_path.exists():
+    if not file_path or not file_path.exists():
+        # Check installed Store blueprints
+        try:
+            from comfylab.engine.config import get_store_dir
+            store_bp_dir = get_store_dir() / "blueprints"
+            if store_bp_dir.exists():
+                for f in store_bp_dir.rglob("*.json"):
+                    if f.name == filename:
+                        file_path = f
+                        break
+        except Exception:
+            pass
+
+    if not file_path or not file_path.exists():
         raise HTTPException(status_code=404, detail="Example blueprint not found")
 
     try:

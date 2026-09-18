@@ -274,3 +274,81 @@ class DeviceXReadBlock(BaseBlock):
         assert "devices/test_store_vendor/device_x/read" in BLOCK_REGISTRY
     finally:
         BLOCK_REGISTRY.pop("devices/test_store_vendor/device_x/read", None)
+
+
+def test_resolve_package_dependencies_topological():
+    from backend.routers.store import resolve_package_dependencies
+
+    catalog = {
+        "packages": [
+            {
+                "id": "instruments/tektronix/scope",
+                "dependencies": []
+            },
+            {
+                "id": "instruments/minipa/gen",
+                "dependencies": []
+            },
+            {
+                "id": "clusters/bode/setup",
+                "dependencies": ["instruments/minipa/gen", "instruments/tektronix/scope"]
+            },
+            {
+                "id": "blueprints/bode/main",
+                "dependencies": ["clusters/bode/setup", "instruments/minipa/gen"]
+            }
+        ]
+    }
+
+    # When installing blueprints/bode/main with nothing installed:
+    order = resolve_package_dependencies(["blueprints/bode/main"], catalog, installed_ids=set())
+    order_ids = [p["id"] for p in order]
+
+    # Verify instruments come before cluster, and cluster comes before blueprint
+    assert order_ids.index("instruments/minipa/gen") < order_ids.index("clusters/bode/setup")
+    assert order_ids.index("instruments/tektronix/scope") < order_ids.index("clusters/bode/setup")
+    assert order_ids.index("clusters/bode/setup") < order_ids.index("blueprints/bode/main")
+    assert order_ids[-1] == "blueprints/bode/main"
+
+
+def test_resolve_blocks_endpoint(tmp_path, monkeypatch):
+    client = TestClient(app)
+
+    mock_catalog = {
+        "packages": [
+            {
+                "id": "instruments/minipa/mfg4230",
+                "type": "instrument",
+                "provides": ["devices/minipa/mfg4230/connect", "devices/minipa/mfg4230/config_wave"],
+                "dependencies": []
+            },
+            {
+                "id": "clusters/bode/physical_setup",
+                "type": "cluster",
+                "provides": ["builtin/cluster/bode_setup_instruments"],
+                "dependencies": ["instruments/minipa/mfg4230"]
+            }
+        ]
+    }
+
+    async def mock_fetch_store_catalog(*args, **kwargs):
+        return mock_catalog
+
+    monkeypatch.setattr("backend.routers.store.fetch_store_catalog", mock_fetch_store_catalog)
+    monkeypatch.setattr("backend.routers.store.load_installed", lambda: {})
+
+    res = client.post("/store/resolve_blocks", json={
+        "block_types": [
+            "devices/minipa/mfg4230/connect",
+            "builtin/cluster/bode_setup_instruments",
+            "some_unknown_block"
+        ]
+    })
+    assert res.status_code == 200
+    data = res.json()
+    assert len(data["matched_packages"]) == 2
+    assert "some_unknown_block" in data["unresolved_blocks"]
+
+    # Verify to_install includes dependency in proper order
+    to_install_ids = [p["id"] for p in data["to_install"]]
+    assert to_install_ids.index("instruments/minipa/mfg4230") < to_install_ids.index("clusters/bode/physical_setup")
