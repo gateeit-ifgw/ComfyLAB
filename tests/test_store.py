@@ -352,3 +352,47 @@ def test_resolve_blocks_endpoint(tmp_path, monkeypatch):
     # Verify to_install includes dependency in proper order
     to_install_ids = [p["id"] for p in data["to_install"]]
     assert to_install_ids.index("instruments/minipa/mfg4230") < to_install_ids.index("clusters/bode/physical_setup")
+
+
+def test_store_uninstall_package(tmp_path, monkeypatch):
+    client = TestClient(app)
+    store_dir = tmp_path / "store"
+    store_dir.mkdir(parents=True)
+    pkg_dir = store_dir / "instruments" / "test_vendor" / "test_device"
+    pkg_dir.mkdir(parents=True)
+    (pkg_dir / "manifest.json").write_text("{}", encoding="utf-8")
+
+    installed = {
+        "instruments/test_vendor/test_device": {
+            "id": "instruments/test_vendor/test_device",
+            "name": "Test Device",
+            "path": "instruments/test_vendor/test_device",
+            "files": ["manifest.json"]
+        }
+    }
+
+    monkeypatch.setattr("backend.routers.store.get_store_dir", lambda: store_dir)
+    monkeypatch.setattr("backend.routers.store.load_installed", lambda: dict(installed))
+    saved_installed = {}
+    monkeypatch.setattr("backend.routers.store.save_installed", lambda data: saved_installed.clear() or saved_installed.update(data))
+    monkeypatch.setattr("backend.routers.store.reload_registry", lambda: None)
+
+    # Valid uninstall
+    res = client.post("/store/uninstall", json={"package_id": "instruments/test_vendor/test_device"})
+    assert res.status_code == 200
+    assert res.json()["status"] == "success"
+    assert not pkg_dir.exists()
+    assert "instruments/test_vendor/test_device" not in saved_installed
+
+    # Path traversal attack attempt should be caught
+    traversal_installed = {
+        "evil_pkg": {
+            "id": "evil_pkg",
+            "path": "../../outside",
+            "files": ["evil.py"]
+        }
+    }
+    monkeypatch.setattr("backend.routers.store.load_installed", lambda: dict(traversal_installed))
+    res = client.post("/store/uninstall", json={"package_id": "evil_pkg"})
+    assert res.status_code == 400
+    assert "Path traversal attempt detected" in res.json()["detail"]

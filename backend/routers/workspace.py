@@ -288,7 +288,7 @@ async def upload_file(
     subdir = subdir.strip("/")
     if subdir:
         target_dir = (uploads_dir / subdir).resolve()
-        if not target_dir.is_relative_to(uploads_dir):
+        if not target_dir.is_relative_to(uploads_dir.resolve()):
             raise HTTPException(status_code=400, detail="Invalid sub-directory path.")
     else:
         target_dir = uploads_dir
@@ -339,7 +339,7 @@ async def get_workspace_file(filepath: str):
     ws_path = get_workspace_path()
     target_path = (ws_path / filepath).resolve()
     
-    if not target_path.is_relative_to(ws_path):
+    if not target_path.is_relative_to(ws_path.resolve()):
         raise HTTPException(status_code=403, detail="Access denied.")
         
     if not target_path.exists() or not target_path.is_file():

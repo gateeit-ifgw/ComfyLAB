@@ -612,7 +612,7 @@ async def uninstall_package(payload: UninstallPayload):
     pkg_info = installed[pkg_id]
     rel_path = pkg_info.get("path") or pkg_id
 
-    store_dir = get_store_dir()
+    store_dir = get_store_dir().resolve()
     pkg_dir = (store_dir / rel_path).resolve()
 
     # Safety check: must be inside store directory

@@ -53,7 +53,7 @@ DEFAULT_CONFIG = {
 
 def get_comfylab_base_dir() -> Path:
     """Returns the base ~/.comfylab path and ensures it exists."""
-    base_dir = Path.home() / ".comfylab"
+    base_dir = (Path.home() / ".comfylab").resolve()
     base_dir.mkdir(parents=True, exist_ok=True)
     return base_dir
 

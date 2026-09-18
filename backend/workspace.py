@@ -20,7 +20,7 @@ _workspace_path: Optional[Path] = None
 
 
 def get_default_workspace_path() -> Path:
-    return Path.home() / DEFAULT_WORKSPACE_NAME
+    return (Path.home() / DEFAULT_WORKSPACE_NAME).resolve()
 
 
 def get_workspace_path() -> Path:
