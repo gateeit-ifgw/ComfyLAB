@@ -11,6 +11,8 @@
 # GNU General Public License for more details.
 
 import os
+import sys
+import asyncio
 import socket
 import struct
 import subprocess
@@ -31,6 +33,7 @@ from backend.routers.workspace import router as workspace_router
 from backend.routers.packages import router as packages_router
 from backend.routers.blocks import router as blocks_router
 from backend.routers.updates import router as updates_router
+from backend.routers.store import router as store_router
 import comfylab.engine.config as config_module
 from comfylab.engine.config import get_config
 from comfylab.engine.registry import BLOCK_REGISTRY, load_all_clusters_deferred
@@ -437,6 +440,7 @@ app.include_router(workspace_router)
 app.include_router(packages_router)
 app.include_router(blocks_router)
 app.include_router(updates_router)
+app.include_router(store_router)
 
 @app.on_event("startup")
 async def startup_event():
@@ -471,6 +475,20 @@ async def startup_event():
         logger.info(f"Cluster loading complete. Total registered blocks: {len(BLOCK_REGISTRY)}")
     except Exception as e:
         logger.error(f"Cluster loading skipped (will retry on reload): {e}")
+
+    # Auto-sync Store subscriptions in the background if enabled
+    async def _bg_store_sync():
+        await asyncio.sleep(2.0)  # Defer slightly so server finishes binding
+        try:
+            from backend.routers.store import load_subscriptions, sync_subscriptions
+            subs = load_subscriptions()
+            if subs.get("auto_sync_on_startup", True) and subs.get("subscriptions"):
+                await sync_subscriptions()
+        except Exception as err:
+            logger.debug(f"Store background startup sync completed or skipped: {err}")
+
+    if not is_test_environment():
+        asyncio.create_task(_bg_store_sync())
 
     if not is_test_environment():
         port = get_frontend_port()

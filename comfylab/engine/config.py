@@ -23,6 +23,9 @@ logger = logging.getLogger("comfylab.engine.config")
 # without import-order tricks or monkey-patching).
 SESSION_TOKEN: str = None
 
+OFFICIAL_STORE_PUBKEY = "3a61083b4c2ebce87fa7c250b3e64712a457315920952ce920dd8bd88509a022"
+DEFAULT_STORE_URL = "https://raw.githubusercontent.com/gateeit-ifgw/comfylab-store/main"
+
 DEFAULT_CONFIG = {
     "custom_block_dirs": [],
     "last_workspace": "",
@@ -41,7 +44,8 @@ DEFAULT_CONFIG = {
     "enable_csharp_scripting": False,
     "external_python_path": "",
     "creator_identity": "",
-    "trusted_origins": [],
+    "trusted_origins": [OFFICIAL_STORE_PUBKEY],
+    "store_url": DEFAULT_STORE_URL,
     "plot_downsample_threshold": 10000,
     "plot_downsample_target": 2000,
     "custom_users": {}
@@ -65,6 +69,28 @@ def get_global_user_clusters_dir() -> Path:
     clusters_dir = get_comfylab_base_dir() / "user_clusters"
     clusters_dir.mkdir(parents=True, exist_ok=True)
     return clusters_dir
+
+
+def get_store_dir() -> Path:
+    """Returns the ComfyLAB Store local root directory (~/.comfylab/store) and ensures it exists."""
+    store_dir = get_comfylab_base_dir() / "store"
+    store_dir.mkdir(parents=True, exist_ok=True)
+    return store_dir
+
+
+def get_store_installed_file() -> Path:
+    """Returns path to ~/.comfylab/store/installed.json."""
+    return get_store_dir() / "installed.json"
+
+
+def get_store_subscriptions_file() -> Path:
+    """Returns path to ~/.comfylab/store/subscriptions.json."""
+    return get_store_dir() / "subscriptions.json"
+
+
+def get_store_catalog_cache_file() -> Path:
+    """Returns path to ~/.comfylab/store/catalog_cache.json."""
+    return get_store_dir() / "catalog_cache.json"
 
 def get_config_file_path() -> Path:
     """Returns the path to ~/.comfylab/config.json."""

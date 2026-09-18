@@ -38,7 +38,10 @@
     "updateAvailable": "Atualização disponível: v{{version}} — Clique para ver detalhes",
     "updateAvailableShort": "Atualização Disponível",
     "dashboard": "Painel de Controle",
-    "dashboardTitle": "Alternar Painel de Controle do Blueprint (D)"
+    "dashboardTitle": "Alternar Painel de Controle do Blueprint (D)",
+    "store": "Loja",
+    "storeTitle": "Abrir Loja do ComfyLAB",
+    "storeBadge": "{{count}} atualização(ões) disponível(is)"
   },
   "splash": {
     "welcome": "Bem-vindo ao ComfyLAB",
@@ -552,5 +555,39 @@
     "copyTableTSV": "Copiar dados da tabela como TSV (colável no Excel/Planilhas)",
     "copiedTSVShort": "TSV Copiado",
     "copyTable": "Copiar Tabela"
+  },
+  "storeModal": {
+    "title": "Loja ComfyLAB",
+    "subtitle": "Drivers de instrumentos modulares, blocos personalizados, clusters e blueprints",
+    "searchPlaceholder": "Buscar instrumentos, blocos, fabricantes...",
+    "tabBrowse": "Explorar",
+    "tabSubscriptions": "Inscrições",
+    "tabInstalled": "Instalados",
+    "allCategories": "Todas as Categorias",
+    "instruments": "Instrumentos",
+    "blocks": "Blocos",
+    "clusters": "Clusters",
+    "blueprints": "Blueprints",
+    "allVendors": "Todos os Fabricantes",
+    "install": "Instalar",
+    "installed": "Instalado",
+    "update": "Atualizar para v{{version}}",
+    "updateAll": "Atualizar Tudo ({{count}})",
+    "uninstall": "Desinstalar",
+    "syncNow": "Sincronizar Agora",
+    "syncSuccess": "Pacotes sincronizados com sucesso!",
+    "subscribe": "Inscrever-se",
+    "subscribed": "Inscrito ✓",
+    "autoSyncOnStartup": "Sincronizar inscrições automaticamente ao iniciar",
+    "autoInstallNew": "Instalar automaticamente novos itens de fabricantes inscritos",
+    "emptyBrowse": "Nenhum pacote encontrado com o filtro atual.",
+    "emptyInstalled": "Nenhum pacote da Loja instalado atualmente.",
+    "updatesAvailable": "{{count}} atualização(ões) disponível(is)",
+    "newSubscribedAvailable": "{{count}} novo(s) item(ns) inscrito(s) pronto(s) para instalar",
+    "installSelected": "Instalar Itens Inscritos",
+    "welcomeTitle": "Expanda sua Biblioteca de Instrumentos",
+    "welcomeDesc": "O ComfyLAB inclui instrumentos genéricos e virtuais por padrão. Use a Loja para instalar suporte aos equipamentos específicos do seu laboratório.",
+    "subscribeAllInstruments": "Inscrever-se em Todos os Instrumentos",
+    "close": "Fechar"
   }
 }

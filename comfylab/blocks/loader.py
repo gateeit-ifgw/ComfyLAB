@@ -120,6 +120,24 @@ def load_all_blocks():
     except Exception as e:
         logger.error(f"Error loading global user blocks: {e}")
 
+    # 2.5. Load ComfyLAB Store installed packages (~/.comfylab/store/)
+    try:
+        from comfylab.engine.config import get_store_dir
+        store_dir = get_store_dir()
+        if store_dir.exists():
+            store_instruments = store_dir / "instruments"
+            if store_instruments.exists():
+                if str(store_instruments) not in sys.path:
+                    sys.path.insert(0, str(store_instruments))
+                load_blocks_from_directory(str(store_instruments))
+            store_blocks = store_dir / "blocks"
+            if store_blocks.exists():
+                if str(store_blocks) not in sys.path:
+                    sys.path.insert(0, str(store_blocks))
+                load_blocks_from_directory(str(store_blocks))
+    except Exception as e:
+        logger.error(f"Error loading store blocks: {e}")
+
     # 3. Load Custom Directories from Config
     try:
         from comfylab.engine.config import get_config
@@ -168,6 +186,18 @@ def load_all_clusters():
             logger.info(f"Loaded {count} clusters from global user clusters directory.")
     except Exception as e:
         logger.error(f"Error loading global user clusters: {e}")
+
+    # 2.5. Load Store clusters (~/.comfylab/store/clusters)
+    try:
+        from comfylab.engine.config import get_store_dir
+        from comfylab.blocks.cluster import load_clusters_from_directory
+        store_clusters_dir = get_store_dir() / "clusters"
+        if store_clusters_dir.exists():
+            count = load_clusters_from_directory(str(store_clusters_dir))
+            if count > 0:
+                logger.info(f"Loaded {count} clusters from store clusters directory.")
+    except Exception as e:
+        logger.error(f"Error loading store clusters: {e}")
 
     # 3. Load Workspace clusters (<workspace>/clusters)
     try:

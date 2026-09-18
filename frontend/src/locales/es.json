@@ -38,7 +38,10 @@
     "updateAvailable": "Actualización disponible: v{{version}} — Clic para ver detalles",
     "updateAvailableShort": "Actualización Disponible",
     "dashboard": "Panel de Control",
-    "dashboardTitle": "Alternar Panel de Control del Blueprint (D)"
+    "dashboardTitle": "Alternar Panel de Control del Blueprint (D)",
+    "store": "Tienda",
+    "storeTitle": "Abrir Tienda de ComfyLAB",
+    "storeBadge": "{{count}} actualización(es) disponible(s)"
   },
   "splash": {
     "welcome": "Bienvenido a ComfyLAB",
@@ -547,5 +550,39 @@
     "copyTableTSV": "Copiar datos de la tabla como TSV (pegable en Excel/Hojas de cálculo)",
     "copiedTSVShort": "TSV Copiado",
     "copyTable": "Copiar Tabla"
+  },
+  "storeModal": {
+    "title": "Tienda ComfyLAB",
+    "subtitle": "Controladores de instrumentos modulares, bloques personalizados, clusters y blueprints",
+    "searchPlaceholder": "Buscar instrumentos, bloques, fabricantes...",
+    "tabBrowse": "Explorar",
+    "tabSubscriptions": "Suscripciones",
+    "tabInstalled": "Instalados",
+    "allCategories": "Todas las Categorías",
+    "instruments": "Instrumentos",
+    "blocks": "Bloques",
+    "clusters": "Clusters",
+    "blueprints": "Blueprints",
+    "allVendors": "Todos los Fabricantes",
+    "install": "Instalar",
+    "installed": "Instalado",
+    "update": "Actualizar a v{{version}}",
+    "updateAll": "Actualizar Todo ({{count}})",
+    "uninstall": "Desinstalar",
+    "syncNow": "Sincronizar Ahora",
+    "syncSuccess": "¡Paquetes sincronizados con éxito!",
+    "subscribe": "Suscribirse",
+    "subscribed": "Suscrito ✓",
+    "autoSyncOnStartup": "Sincronizar suscripciones automáticamente al iniciar",
+    "autoInstallNew": "Instalar automáticamente nuevos elementos de fabricantes suscritos",
+    "emptyBrowse": "No se encontraron paquetes con el filtro actual.",
+    "emptyInstalled": "No hay paquetes de la Tienda instalados actualmente.",
+    "updatesAvailable": "{{count}} actualización(es) disponible(s)",
+    "newSubscribedAvailable": "{{count}} nuevo(s) elemento(s) suscrito(s) listo(s) para instalar",
+    "installSelected": "Instalar Elementos Suscritos",
+    "welcomeTitle": "Amplíe su Biblioteca de Instrumentos",
+    "welcomeDesc": "ComfyLAB incluye instrumentos genéricos y virtuales por defecto. Use la Tienda para instalar soporte para los equipos específicos de su laboratorio.",
+    "subscribeAllInstruments": "Suscribirse a Todos los Instrumentos",
+    "close": "Cerrar"
   }
 }

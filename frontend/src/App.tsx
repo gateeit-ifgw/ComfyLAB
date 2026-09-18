@@ -58,6 +58,7 @@ import { UploadFileModal } from './components/modals/UploadFileModal';
 import { ConfirmModal } from './components/modals/ConfirmModal';
 import { AlertModal } from './components/modals/AlertModal';
 import { AboutModal } from './components/modals/AboutModal';
+import { StoreModal } from './components/modals/StoreModal';
 import { QuickStartModal } from './components/modals/QuickStartModal';
 import { SplashScreenModal } from './components/modals/SplashScreenModal';
 import { LoadExampleModal } from './components/modals/LoadExampleModal';
@@ -613,6 +614,27 @@ function Flow() {
   useEffect(() => {
     fetchUpdateInfo(false);
   }, [fetchUpdateInfo]);
+
+  // ComfyLAB Store Modal & Badge States
+  const [storeModalOpen, setStoreModalOpen] = useState(false);
+  const [storeBadgeCount, setStoreBadgeCount] = useState(0);
+
+  const fetchStoreBadge = useCallback(async () => {
+    try {
+      const res = await axios.get(`${BACKEND_URL}/store/badge`);
+      if (res.data && typeof res.data.total_badge_count === 'number') {
+        setStoreBadgeCount(res.data.total_badge_count);
+      }
+    } catch (err) {
+      console.debug('Failed to fetch store badge:', err);
+    }
+  }, [BACKEND_URL]);
+
+  useEffect(() => {
+    fetchStoreBadge();
+    const interval = setInterval(fetchStoreBadge, 120000); // Poll badge every 2 minutes
+    return () => clearInterval(interval);
+  }, [fetchStoreBadge]);
 
   // Trust Warning Modal States
   const [trustWarningOpen, setTrustWarningOpen] = useState(false);
@@ -3962,6 +3984,8 @@ return {
           dashboardOpen={dashboardOpen}
           onToggleDashboard={() => setDashboardOpen(prev => !prev)}
           dashboardItemsCount={dashboardItems.length}
+          onOpenStore={() => setStoreModalOpen(true)}
+          storeBadgeCount={storeBadgeCount}
         />
 
 
@@ -4745,6 +4769,17 @@ return {
             onClose={() => setAboutModalOpen(false)} 
             updateInfo={updateInfo}
             onCheckUpdate={fetchUpdateInfo}
+          />
+        )}
+
+        {/* --- COMFYLAB STORE MODAL --- */}
+        {storeModalOpen && (
+          <StoreModal
+            onClose={() => {
+              setStoreModalOpen(false);
+              fetchStoreBadge();
+            }}
+            onRefreshRegistry={handleReloadRegistry}
           />
         )}
 

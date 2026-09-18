@@ -67,6 +67,8 @@ interface TopBarProps {
   dashboardOpen?: boolean;
   onToggleDashboard?: () => void;
   dashboardItemsCount?: number;
+  onOpenStore?: () => void;
+  storeBadgeCount?: number;
 }
 
 
@@ -119,6 +121,8 @@ export const TopBar = ({
   dashboardOpen,
   onToggleDashboard,
   dashboardItemsCount = 0,
+  onOpenStore,
+  storeBadgeCount = 0,
 }: TopBarProps) => {
 
   const [showAboutModal, setShowAboutModal] = useState(false);
@@ -197,6 +201,11 @@ export const TopBar = ({
               {onOpenSplash && (
                 <button onClick={() => { setMenuOpen(false); onOpenSplash(); }}>
                   <span>⚡</span> {t('topbar.welcomeSplash', 'Welcome Splash Screen')}
+                </button>
+              )}
+              {onOpenStore && (
+                <button onClick={() => { setMenuOpen(false); onOpenStore(); }}>
+                  <span>🛍️</span> {t('topbar.store', 'Store')}
                 </button>
               )}
             </div>
@@ -352,6 +361,43 @@ export const TopBar = ({
                 }}
               >
                 {dashboardItemsCount}
+              </span>
+            )}
+          </button>
+        )}
+
+        {onOpenStore && (
+          <button
+            className="button-secondary store-toggle-btn"
+            onClick={onOpenStore}
+            style={{
+              height: '38px',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '0 12px',
+              fontWeight: 600,
+              position: 'relative'
+            }}
+            title={t('topbar.storeTitle', 'Open ComfyLAB Store')}
+          >
+            <span style={{ fontSize: '1.05rem' }}>🛍️</span>
+            <span>{t('topbar.store', 'Store')}</span>
+            {storeBadgeCount > 0 && (
+              <span
+                style={{
+                  backgroundColor: '#10b981',
+                  color: '#ffffff',
+                  fontSize: '0.7rem',
+                  fontWeight: 'bold',
+                  padding: '1px 6px',
+                  borderRadius: '10px',
+                  marginLeft: '2px',
+                }}
+                title={t('topbar.storeBadge', '{{count}} update(s) available', { count: storeBadgeCount })}
+              >
+                {storeBadgeCount}
               </span>
             )}
           </button>

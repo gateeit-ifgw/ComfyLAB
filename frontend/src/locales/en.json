@@ -39,7 +39,10 @@
     "updateAvailable": "Update available: v{{version}} — Click to view details",
     "updateAvailableShort": "Update Available",
     "dashboard": "Dashboard",
-    "dashboardTitle": "Toggle Blueprint Dashboard (D)"
+    "dashboardTitle": "Toggle Blueprint Dashboard (D)",
+    "store": "Store",
+    "storeTitle": "Open ComfyLAB Store",
+    "storeBadge": "{{count}} update(s) available"
   },
   "splash": {
     "welcome": "Welcome to ComfyLAB",
@@ -552,5 +555,39 @@
     "copyTableTSV": "Copy table data as TSV (pasteable to Excel/Sheets)",
     "copiedTSVShort": "Copied TSV",
     "copyTable": "Copy Table"
+  },
+  "storeModal": {
+    "title": "ComfyLAB Store",
+    "subtitle": "Modular instrument drivers, custom blocks, clusters, and blueprints",
+    "searchPlaceholder": "Search instruments, blocks, vendors...",
+    "tabBrowse": "Browse",
+    "tabSubscriptions": "Subscriptions",
+    "tabInstalled": "Installed",
+    "allCategories": "All Categories",
+    "instruments": "Instruments",
+    "blocks": "Blocks",
+    "clusters": "Clusters",
+    "blueprints": "Blueprints",
+    "allVendors": "All Vendors",
+    "install": "Install",
+    "installed": "Installed",
+    "update": "Update to v{{version}}",
+    "updateAll": "Update All ({{count}})",
+    "uninstall": "Uninstall",
+    "syncNow": "Sync Now",
+    "syncSuccess": "Successfully synchronized packages!",
+    "subscribe": "Subscribe",
+    "subscribed": "Subscribed ✓",
+    "autoSyncOnStartup": "Auto-sync subscriptions on startup",
+    "autoInstallNew": "Automatically install newly added items in subscribed vendors",
+    "emptyBrowse": "No packages found matching your filter.",
+    "emptyInstalled": "No Store packages currently installed.",
+    "updatesAvailable": "{{count}} update(s) available",
+    "newSubscribedAvailable": "{{count}} new subscribed item(s) ready to install",
+    "installSelected": "Install Subscribed Items",
+    "welcomeTitle": "Expand Your Instrument Library",
+    "welcomeDesc": "ComfyLAB ships with generic and virtual instruments. Use the Store to install support for your specific lab equipment.",
+    "subscribeAllInstruments": "Subscribe to All Instruments",
+    "close": "Close"
   }
 }
