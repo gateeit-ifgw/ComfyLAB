@@ -27,6 +27,7 @@ ComfyLAB (**Comf**ortable **L**ab **A**utomation **B**locks) is a visual, block-
 - **Custom Cluster Blocks**: Group a set of connected blocks into a single custom cluster block to keep your workspace clean and organized.
 - **Security Protections**: Prevents untrusted blueprints from executing malicious scripts on your computer. You will be warned and asked for approval before running code from unknown sources.
 - **Secure Remote Access**: Remotely access your lab setup PC running ComfyLAB, protected by a simple two-word token (user/password also available if needed).
+- **ComfyLAB Official Store & Modular Ecosystem**: Decoupled instrument driver, cluster, and blueprint store. Install support for specific laboratory hardware with 1 click, subscribe to makers (Keysight, Tektronix, Thorlabs, etc.) with automated sync, and let dependencies auto-resolve.
 - **Application Info & About Modal**: Access application details, license info, and versioning directly from the UI toolbar.
 
 ---
@@ -56,18 +57,18 @@ ComfyLAB will launch the backend server and automatically open the application i
 
 ### Option 2: Pre-compiled Releases (Run-Ready)
 
-#### A. Standalone Single-File Binary (Zero-Dependency)
-1. Download `ComfyLAB.exe` (Windows) or `ComfyLAB` (Linux/macOS) from the **GitHub Releases** page.
+#### A. Standalone Windows Executable (Zero-Dependency)
+1. Download `comfylab-executable-vX.X.X-windows-x86_64.zip` from the **GitHub Releases** page and extract it.
 2. Launch the application:
-   * **Windows**: Double-click `ComfyLAB.exe`.
-   * **Linux / macOS**: Make it executable (`chmod +x ComfyLAB`) and run `./ComfyLAB` in a terminal.
-3. Automatically opens in your default browser at `http://localhost:8000`.
+   * Double-click `ComfyLAB.exe`.
+3. Automatically opens in your default browser at `http://localhost:8000` (no Python or admin rights required).
 
-#### B. Base Release Package (ZIP Archive)
-1. Download the release `.zip` package from the **GitHub Releases** page and extract it.
+#### B. Base Release Package (Cross-Platform ZIP Archive)
+Recommended for Linux and macOS, or Windows users who prefer a lightweight portable folder:
+1. Download the release `.zip` package (`comfylab-release-vX.X.X.zip`, ~2 MB) from the **GitHub Releases** page and extract it.
 2. Launch the application:
+   * **Linux / macOS**: Run `bash start.sh` in a terminal.
    * **Windows**: Double-click `start.bat`.
-   * **Linux / macOS**: Run `bash start.sh` in terminal.
 3. The bootstrapper script automatically initializes a local virtual environment, verifies dependencies, starts the backend, and opens your browser.
 
 ---
@@ -124,6 +125,18 @@ ComfyLAB provides a rich, modular ecosystem of blocks for building automation wo
 - **Multi-Language Scripting**: Polyglot code execution blocks supporting 9 scripting languages (Python, Rust, JavaScript, TypeScript, Julia, R, Lua, Octave, Wolfram).
 - **Clusters**: Group complex sub-graphs into custom reusable cluster blocks with dynamic input/output boundaries.
 - **Utility & Timing**: Delays, timestamps, stopwatches, type conversion, console logging, and debugging inspectors.
+
+---
+
+## 🛍️ ComfyLAB Store & Modular Equipment Ecosystem
+
+To keep the core distribution ultra-lightweight, portable, and fast to boot, physical vendor hardware drivers, advanced sub-canvas clusters, and complete experiment blueprints are decoupled from the core and distributed modularly through the **Official ComfyLAB Store** ([gateeit-ifgw/comfylab-store](https://github.com/gateeit-ifgw/comfylab-store)).
+
+* **Single-Click Installation**: Access the Store directly from the top navigation bar (`[ 🛍️ Store ]`) or the application menu. Browse by category (**Instruments**, **Clusters**, **Blueprints**, **Blocks**) or search by vendor and instrument model.
+* **Topological Dependency Resolution**: Installing a high-level experiment blueprint or cluster automatically resolves, downloads, and registers all required dependencies (such as underlying instrument drivers and sub-clusters) in the correct topological order.
+* **Automatic Missing Block Detection**: If you open a blueprint referencing hardware drivers or clusters not yet installed locally, ComfyLAB highlights them and provides a one-click button to download the exact required packages from the Store.
+* **Vendor & Category Subscriptions**: Subscribe to *All Instruments* or individual manufacturers (e.g. Keysight, Tektronix, Agilent, Minipa, Thorlabs, Keithley, CAEN). ComfyLAB checks for new packages and updates on startup or whenever you click "Sync Now".
+* **Cryptographic Security & Verification**: Every store package and the central catalog are digitally signed with Ed25519 cryptography and SHA-256 integrity hashes to ensure all downloaded drivers are authentic and untampered.
 
 ---
 
@@ -187,15 +200,17 @@ ComfyLAB/  (root)
 ├── build_release.py            # Builds the release ZIP and PyPI wheel packages
 ├── ComfyLAB.spec               # PyInstaller spec (frozen core + external blocks)
 ├── backend/                    # FastAPI API routers & WebSockets server
+│   └── routers/store.py        # Store API, package download, dependency resolution & subscriptions
 ├── comfylab/                   # Core Python Package & Execution Engine
 │   ├── __main__.py             # Entry point for `python -m comfylab`
 │   ├── cli.py                  # Unified CLI coordinator & argument handler
 │   ├── engine/                 # Models, executor, lock manager, registry, security, config
-│   ├── blocks/                 # Block protocol (base), category modules, scripts, VISA
-│   ├── clusters/               # Built-in cluster sub-graph definitions
-│   ├── devices/                # Extensible instrument driver modules
-│   └── examples/               # Built-in example experiment workflows (.json)
-├── frontend/                   # React + Vite + React Flow web UI
+│   ├── blocks/                 # Block protocol (base), category modules, scripts, VISA, Store loader
+│   ├── clusters/               # Built-in generic & virtual cluster definitions
+│   ├── devices/                # Extensible base & virtual instrument driver modules
+│   └── examples/               # Built-in generic example experiment workflows (.json)
+├── frontend/                   # React + Vite + React Flow web UI (includes Store modal)
+├── dist/comfylab-store/        # Official Store repository (packages, catalog, CI actions)
 └── tests/                      # Automated pytest integration & unit tests
 ```
 
@@ -213,12 +228,14 @@ python3 build_release.py
 python3 build_release.py --bump [patch|minor|major]
 ```
 
-### 2. Build Standalone Single-File Executable
-To compile the entire application into a single, zero-dependency executable (`ComfyLAB` or `ComfyLAB.exe`):
+### 2. Build Standalone Windows Executable
+To compile the standalone Windows executable (`ComfyLAB.exe`) from Linux/macOS using Docker and Wine:
 ```bash
-python3 build_exe.py
-# Optionally bump version:
-python3 build_exe.py --bump [patch|minor|major]
+./build_windows_docker.sh
+```
+Or directly on a native Windows machine:
+```cmd
+python build_exe.py
 ```
 
 ---

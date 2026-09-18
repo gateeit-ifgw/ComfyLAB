@@ -139,7 +139,7 @@ A interface do usuário do ComfyLAB é composta por três zonas funcionais princ
 ```
 
 #### Descrição Detalhada da Interface:
-* **Barra de Ferramentas Superior**: Controles para executar (▶️ / `Ctrl+R`), pausar (⏸️) e parar (🛑 / `Ctrl+Shift+R`) blueprints, abrir o **Dashboard do Operador** (📊 / `D`), criar/salvar arquivos de workspace (`Ctrl+S`), alternar temas de cores e configurar opções globais do VISA e diagnósticos.
+* **Barra de Ferramentas Superior**: Controles para executar (▶️ / `Ctrl+R`), pausar (⏸️) e parar (🛑 / `Ctrl+Shift+R`) blueprints, abrir o **Dashboard do Operador** (📊 / `D`), acessar a **ComfyLAB Store** (🛍️), criar/salvar arquivos de workspace (`Ctrl+S`), alternar temas de cores e configurar opções globais do VISA e diagnósticos.
 * **Barra Lateral (Esquerda)**: Paleta pesquisável contendo todos os blocos nativos disponíveis, blocos customizados publicados, blocos de instrumentos virtuais e nós de script categorizados por domínio.
 * **Canvas Principal (Centro)**: Área de trabalho visual infinita com zoom e pan onde você arrasta, posiciona e conecta os blocos funcionais.
 * **Inspetor de Blocos (Direita)**: Painel de detalhes contextual que se abre ao selecionar um bloco. Exibe valores de pinos ao vivo, parâmetros do bloco, documentação resumida, notas e logs de console de execução.
@@ -206,6 +206,7 @@ As conexões entre blocos no ComfyLAB são estritamente divididas em duas catego
 * **Desativação de Blocos (🚫)**: Clicar com o botão direito em um bloco para desativá-lo o deixa opaco no canvas. Blocos desativados são ignorados durante a execução, repassando dados de forma limpa sem executar código—ideal para testar fluxos sem hardware físico.
 * **Clusters (Sub-canvases 📦)**: Agrupamento de arranjos complexos de blocos em um único bloco customizado. Dar um duplo clique em um bloco de cluster abre um sub-canvas isolado, com breadcrumbs na barra superior para navegação.
 * **Modo Lousa / Whiteboard (🎨)**: Clique no ícone de ferramenta ou pressione o atalho `4` para alternar o modo de desenho, permitindo adicionar notas adesivas, caixas de texto e formas geométricas diretamente sobre o canvas.
+* **ComfyLAB Store e Assinaturas (🛍️)**: Gerenciador integrado de pacotes que mantém a distribuição central leve e portátil, oferecendo acesso modular a drivers de equipamentos comerciais, clusters especializados e blueprints completos de experimentos. Inclui instalação em 1 clique, resolução automática de dependências e assinaturas de fabricantes com sincronização na inicialização.
 
 <div style="page-break-before: always; break-before: page;"></div>
 
@@ -222,7 +223,7 @@ As conexões entre blocos no ComfyLAB são estritamente divididas em duas catego
 | 💾 **Entrada/Saída de Arquivos** | Leitura/Escrita de arquivos CSV, JSON, armazenamento Parquet, Leitura/Escrita de Texto Puro, Carregador e Salvador de Imagens. |
 | 📡 **VISA e Hardware Físico** | Abrir Recurso VISA, Escrita SCPI, Leitura SCPI, Consulta SCPI (Query), Fechar VISA, Abrir/Ler/Escrever Porta Serial, Descoberta Automática de Instrumentos. |
 | 🖥️ **Instrumentos Virtuais** | **VirtOsc** (Conexão, Base de Tempo, Canais 1 e 2, Trigger, Estado, Aquisição de Traço), **VirtSigGen** (Conexão, Onda Senoidal/Quadrada/Triangular, Varredura Chirp, Nível de Saída), Circuito RC Simulado. |
-| 🔬 **Drivers de Instrumentos** | Osciloscópios (Tektronix, Keysight, Agilent), Multímetros Digitais (HP/Agilent 34401A, DMM Genérico), Fontes DC (Keysight, Keithley), Geradores de Funções, Espectrômetros Horiba Jobin Yvon, Digitalizadores CAEN, Motores Thorlabs. |
+| 🔬 **Drivers Modulares de Instrumentos** | Drivers modulares instalados sob demanda via ComfyLAB Store: Osciloscópios (Tektronix, Keysight), Multímetros (HP/Agilent 34401A), Fontes DC, Espectrômetros Horiba Jobin Yvon, Digitalizadores CAEN, Motores Thorlabs, Minipa, etc. |
 | 📈 **Exibição, Gráficos e UI** | **Gráfico XY / Linhas** (traço único/múltiplo, log/linear), **Gráfico Dual-Y**, **Gráfico de Barras**, **Box Plot**, **Histograma**, **Superfície 3D & Dispersão 3D**, **Gráfico Polar**, **Cascata Espectral (Waterfall)**, Matriz 2D Heatmap, Tabela, Gauge, LED, **Barra de Progresso**, **Relógio ETR**, **Relógio Regressivo**. |
 | ⚙️ **Nativo e Scripting** | Invocação de Biblioteca Nativa (DLL/SO) com Editor de Assinaturas, Nós de Script Poliglotas (Python, JS/TS, Julia, Rust, Lua, Octave, R, Wolfram) com suporte à variável `COMFYLAB_WORKSPACE`. |
 
@@ -424,7 +425,42 @@ Utilize estes exercícios passo a passo rápidos para se familiarizar com o Comf
 
 ---
 
-## 7. Guia Rápido de Atalhos e Referência de Teclado
+## 7. ComfyLAB Store e Gerenciamento de Pacotes
+
+A **ComfyLAB Store** é um ecossistema modular integrado projetado para manter a instalação base do ComfyLAB leve, portátil e de inicialização instantânea, disponibilizando sob demanda drivers de equipamentos comerciais, clusters de sub-canvas especializados e workflows de experimentos completos.
+
+### 7.1 Conceitos Principais da Store
+
+* **Arquitetura Desacoplada**: A instalação padrão inclui blocos genéricos de comunicação (VISA/Serial) e simuladores de instrumentos virtuais. Drivers dedicados a modelos físicos de fabricantes (Keysight, Tektronix, Agilent, Minipa, Thorlabs, Keithley, CAEN, etc.) e blueprints de bancada são distribuídos pelo repositório oficial da Store ([gateeit-ifgw/comfylab-store](https://github.com/gateeit-ifgw/comfylab-store)).
+* **Categorias de Pacotes**:
+  * **Instrumentos (Instruments)**: Drivers dedicados com comandos, consultas e tratamentos específicos de hardware comercial.
+  * **Clusters**: Blocos compostos com sub-canvases pré-configurados e pinos de entrada/saída padronizados.
+  * **Blueprints**: Workflows de experimentos automatizados prontos para uso (como o *Levantamento de Curva de Bode* ou *Espectroscopia VUV Horiba*).
+  * **Blocos (Blocks)**: Blocos analíticos, matemáticos ou de controle reutilizáveis.
+* **Resolução Topológica de Dependências**: Blueprints e clusters declaram dependências explicitamente. Ao instalar um blueprint de bancada, o ComfyLAB identifica, baixa e registra automaticamente todos os clusters e drivers de instrumentos necessários em ordem estrita de dependência.
+* **Detecção Automática de Blocos Ausentes**: Se você abrir um blueprint compartilhado que contenha blocos ou clusters ainda não instalados no seu computador, o ComfyLAB exibe um aviso com botão de instalação em 1 clique para baixar os pacotes necessários diretamente da Store.
+* **Assinaturas e Sincronização Automática**: Na aba **Subscriptions**, você pode assinar a categoria *All Instruments* ou fabricantes específicos presentes no seu laboratório. O ComfyLAB verifica novos drivers e atualizações na inicialização ou através do botão **Sync Now**.
+* **Segurança Criptográfica**: Cada pacote e o catálogo central são assinados com chaves digitais Ed25519 e verificados por hashes SHA-256 para garantir integridade e procedência do código.
+
+---
+
+### 7.2 Tutorial 7: Instalando Instrumentos e Blueprints pela Store
+
+**Objetivo**: Abrir a ComfyLAB Store, instalar um driver ou blueprint com resolução automática de dependências e gerenciar assinaturas.
+
+#### Instruções Passo a Passo:
+1. **Abrir a Store**: Clique no botão **🛍️ Store** no centro da Barra de Ferramentas Superior (ou no menu hambúrguer no canto superior esquerdo). Uma insígnia verde (badge) avisa quando há novas atualizações ou pacotes disponíveis nas suas assinaturas.
+2. **Navegar e Filtrar**: Use a barra de busca ou as abas de categoria (**All**, **Instruments**, **Clusters**, **Blueprints**) para localizar o equipamento ou experimento desejado.
+3. **Instalação em 1 Clique**: Clique em **Install** no pacote desejado. Se houver dependências (por exemplo, um blueprint que precisa do driver do osciloscópio e do gerador), o ComfyLAB exibirá a lista de pacotes e os instalará em ordem.
+4. **Disponibilidade Imediata**: Os novos blocos aparecem instantaneamente na paleta da barra lateral esquerda, prontos para uso, e os blueprints ficam disponíveis em **Menu Arquivo > Carregar Exemplo**.
+5. **Atualizações e Desinstalação**: Na aba **Installed**, consulte as versões instaladas, atualize para versões recentes ou desinstale pacotes com segurança.
+6. **Atualizações Automáticas**: Na aba **Subscriptions**, ative os fabricantes do seu laboratório (ex.: *Keysight* ou *Tektronix*) para receber drivers novos automaticamente sempre que iniciar o ComfyLAB.
+
+<div style="page-break-before: always; break-before: page;"></div>
+
+---
+
+## 8. Guia Rápido de Atalhos e Referência de Teclado
 
 ### Atalhos de Teclado
 

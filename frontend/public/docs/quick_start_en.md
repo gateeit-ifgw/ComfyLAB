@@ -151,7 +151,7 @@ The ComfyLAB user interface consists of three primary functional zones surrounde
 ```
 
 #### Detailed Interface Description:
-* **Top Toolbar**: Controls for running (▶️ / `Ctrl+R`), pausing (⏸️), and stopping (🛑 / `Ctrl+Shift+R`) blueprints, opening the **Experiment Dashboard** (📊 / `D`), creating/saving workspace files (`Ctrl+S`), changing color themes, and configuring global VISA settings and diagnostics.
+* **Top Toolbar**: Controls for running (▶️ / `Ctrl+R`), pausing (⏸️), and stopping (🛑 / `Ctrl+Shift+R`) blueprints, opening the **Experiment Dashboard** (📊 / `D`), accessing the **ComfyLAB Store** (🛍️), creating/saving workspace files (`Ctrl+S`), changing color themes, and configuring global VISA settings and diagnostics.
 * **Sidebar (Left)**: Searchable palette containing all available built-in blocks, custom published blocks, virtual instrument blocks, and script nodes categorized by domain.
 * **Main Canvas (Center)**: Infinite zoomable and pannable visual workspace where you drag, position, and wire functional blocks together.
 * **Block Inspector (Right)**: Contextual detail panel that opens when a block is selected. Displays live pin values, block parameters, brief documentation, notes, and execution console logs.
@@ -218,6 +218,7 @@ Connections between blocks in ComfyLAB are strictly divided into two distinct ca
 * **Disabling Blocks (🚫)**: Right-clicking a block to disable it dims the block on canvas. Disabled blocks are bypassed during execution, passing data through cleanly without running code—ideal for testing workflows without physical hardware.
 * **Clusters (Sub-canvases 📦)**: Group complex block arrangements into a single custom block. Double-clicking a cluster block opens an isolated sub-canvas, with top breadcrumbs for navigation.
 * **Whiteboard Mode (🎨)**: Click the tool icon or press hotkey `4` to toggle drawing mode, allowing freehand ink notes, text boxes, and shapes to be added directly over the canvas.
+* **ComfyLAB Store & Subscriptions (🛍️)**: Built-in package manager that keeps the core distribution light while providing instant access to vendor instrument drivers, specialized clusters, and full experiment blueprints. Includes 1-click installation, automatic dependency resolution, and vendor subscriptions with startup auto-sync.
 
 <div style="page-break-before: always; break-before: page;"></div>
 
@@ -234,7 +235,7 @@ Connections between blocks in ComfyLAB are strictly divided into two distinct ca
 | 💾 **File I/O** | Persistence and data export: `Save CSV`, `Load CSV`, `JSON I/O`, `Parquet Storage`, `Text File I/O`, `Image Loader/Saver`. |
 | 📡 **VISA & Physical Hardware** | Instrument communication: `VISA Device`, `VISA Query`, `VISA Read`, `VISA Write`, `Serial Port Open/Read/Write`, `Auto Resource Discovery`. |
 | 🖥️ **Virtual Instruments** | Zero-hardware simulation: `VirtOsc Connect/Acquire`, `VirtSigGen Connect/Config Wave`, `Simulated RC Circuit`. |
-| 🔬 **Device Drivers** | Vendor instrument drivers: Oscilloscopes (Tektronix, Keysight), Multimeters (HP/Agilent 34401A), Power Supplies, Horiba Spectrometers, CAEN Digitizers, Thorlabs Motors. |
+| 🔬 **Modular Device Drivers** | Modular vendor drivers installed on demand via the ComfyLAB Store: Oscilloscopes (Tektronix, Keysight), Multimeters (HP/Agilent 34401A), Power Supplies, Horiba Spectrometers, CAEN Digitizers, Thorlabs Motors, Minipa, etc. |
 | 📈 **Display & Dashboard** | Data visualization and monitoring: `XY Plot`, `Dual Y-Axis Plot`, `Bar Plot`, `Box / Violin Plot`, `Histogram`, `3D Surface/Scatter`, `Polar Plot`, `Waterfall Spectrogram`, `Heatmap Plot`, `Progress Bar`, `ETR Clock`. |
 | ⚙️ **Scripting & Native** | Custom extensions: `Native Library Invocation` (C/C++ DLL/SO via Signature Editor), `Multi-Language Script Blocks` (Python, JS/TS, Julia, Rust, Lua, Octave, R, Wolfram). |
 
@@ -433,7 +434,42 @@ Follow these step-by-step practical examples to quickly master core ComfyLAB wor
 
 ---
 
-## 7. Cheat Sheet & Keyboard Reference
+## 7. ComfyLAB Store & Package Management
+
+The **ComfyLAB Store** is a built-in modular repository that keeps the core software clean and ultra-fast to load, while providing on-demand access to real hardware drivers, custom sub-canvas clusters, and complete experiment blueprints.
+
+### 7.1 Key Store Concepts
+
+* **Decoupled Architecture**: ComfyLAB core includes universal VISA/Serial generic blocks and virtual instrument simulations. Physical instrument drivers (Keysight, Tektronix, Agilent, Minipa, Thorlabs, Keithley, CAEN, etc.) and hardware-specific workflows reside in the Official Store repository ([gateeit-ifgw/comfylab-store](https://github.com/gateeit-ifgw/comfylab-store)).
+* **Package Categories**:
+  * **Instruments**: Commercial hardware drivers providing dedicated blocks with predefined commands and parameters.
+  * **Clusters**: Pre-packaged, reusable sub-canvas clusters with verified input/output pins.
+  * **Blueprints**: Turnkey, automated experiment blueprints (such as the *Bode Plot Frequency Response* or *Horiba VUV Spectroscopy*).
+  * **Blocks**: Reusable mathematical, signal-processing, or control blocks.
+* **Topological Dependency Resolution**: Blueprints and clusters declare their dependencies. Installing an experiment workflow automatically resolves, downloads, and registers all required sub-clusters and underlying instrument drivers in strict dependency order.
+* **Automatic Missing Block Detection**: If you load an example or shared blueprint that contains blocks you haven't installed yet, ComfyLAB highlights the missing packages and offers a one-click button to download and install them with all dependencies.
+* **Vendor & Category Subscriptions**: Under the **Subscriptions** tab, subscribe to *All Instruments* or individual manufacturers. ComfyLAB checks for new drivers and updates upon application startup, or you can click **Sync Now** anytime.
+* **Cryptographic Security**: Every package and the central catalog are verified with Ed25519 digital signatures and SHA-256 integrity hashes to guarantee code authenticity.
+
+---
+
+### 7.2 Tutorial 7: Installing Instruments & Workflows from the Store
+
+**Objective**: Open the ComfyLAB Store, install an instrument driver or experiment blueprint with automated dependency resolution, and configure vendor subscriptions.
+
+#### Step-by-Step Instructions:
+1. **Open the Store**: Click the **🛍️ Store** button located in the center of the top toolbar (or select **Store** from the top-left hamburger menu). An emerald badge appears when updates or new subscription items are available.
+2. **Browse & Filter**: Use the search input or filter pills (**All**, **Instruments**, **Clusters**, **Blueprints**) to find the hardware or experiment you need.
+3. **One-Click Install**: Click **Install** on the desired package. If the item depends on other packages (e.g. a blueprint requiring an oscilloscope and signal generator driver), ComfyLAB confirms the dependency list and installs them sequentially.
+4. **Immediate Availability**: Once installed, the new blocks appear instantly in the left sidebar palette under their respective categories, and blueprints appear under **File Menu > Load Example**.
+5. **Managing Updates & Uninstall**: Under the **Installed** tab, you can check installed versions, upgrade to newer releases, or cleanly uninstall packages.
+6. **Automatic Updates**: Under the **Subscriptions** tab, toggle subscriptions for the vendors present in your laboratory (e.g. *Keysight* or *Tektronix*) to automatically receive new driver releases on startup.
+
+<div style="page-break-before: always; break-before: page;"></div>
+
+---
+
+## 8. Cheat Sheet & Keyboard Reference
 
 ### Hotkeys & Shortcuts
 
