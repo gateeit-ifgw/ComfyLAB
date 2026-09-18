@@ -10,7 +10,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import { getBackendUrls } from '../../App';
-import { useTranslation } from '../../i18n';
+import { i18n, useTranslation } from '../../i18n';
 
 interface StoreModalProps {
   onClose: () => void;
@@ -92,7 +92,7 @@ interface StoreStatusResponse {
 }
 
 export const StoreModal: React.FC<StoreModalProps> = ({ onClose, onRefreshRegistry, initialTab = 'browse' }) => {
-  const { t } = useTranslation();
+  const { t, currentLanguage } = useTranslation();
   const [activeTab, setActiveTab] = useState<'browse' | 'subscriptions' | 'installed'>(initialTab);
   const [catalog, setCatalog] = useState<CatalogData | null>(null);
   const [status, setStatus] = useState<StoreStatusResponse | null>(null);
@@ -148,12 +148,12 @@ export const StoreModal: React.FC<StoreModalProps> = ({ onClose, onRefreshRegist
 
   // Filtered packages
   const getPackageName = (pkg: { name: string; id?: string; i18n?: Record<string, { name?: string; description?: string }> }) => {
-    const lang = i18n.language;
+    const lang = currentLanguage || i18n?.language || 'en';
     return pkg.i18n?.[lang]?.name || pkg.i18n?.['en']?.name || pkg.name;
   };
 
   const getPackageDescription = (pkg: { description?: string; i18n?: Record<string, { name?: string; description?: string }> }) => {
-    const lang = i18n.language;
+    const lang = currentLanguage || i18n?.language || 'en';
     return pkg.i18n?.[lang]?.description || pkg.i18n?.['en']?.description || pkg.description || '';
   };
 
@@ -189,7 +189,7 @@ export const StoreModal: React.FC<StoreModalProps> = ({ onClose, onRefreshRegist
 
       return true;
     });
-  }, [catalog, selectedCategory, selectedVendor, searchQuery]);
+  }, [catalog, selectedCategory, selectedVendor, searchQuery, currentLanguage]);
 
   // Install package
   const handleInstall = async (pkgId: string) => {
