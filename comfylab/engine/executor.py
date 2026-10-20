@@ -266,14 +266,18 @@ class ExecutionEngine:
             run_id_var.reset(run_token)
 
     def _find_entry_points(self) -> List[tuple[str, str]]:
-        """Finds all ExecIn pins that do not have incoming execution links."""
+        """
+        Finds the blocks that start a run: blocks whose ExecIn pins have no incoming execution links.
+        Each entry block is triggered once, on its first (primary) ExecIn pin. Secondary pins such as
+        Timer 'Stop', Countdown 'Skip' or Accumulate 'Reset' must never fire on their own just because
+        they are left unwired, and a block with any wired ExecIn is driven by its upstream flow instead.
+        """
         exec_targets = set(self.exec_links.values())
         entry_points = []
         for block_id, block in self.blocks.items():
-            for pin_name, pin in block.inputs.items():
-                if isinstance(pin, ExecIn):
-                    if (block_id, pin_name) not in exec_targets:
-                        entry_points.append((block_id, pin_name))
+            exec_pins = [pin_name for pin_name, pin in block.inputs.items() if isinstance(pin, ExecIn)]
+            if exec_pins and not any((block_id, pin_name) in exec_targets for pin_name in exec_pins):
+                entry_points.append((block_id, exec_pins[0]))
         return entry_points
 
     async def trigger_exec(self, block_id: str, pin_name: str, context: ExecutionContext):
@@ -626,61 +630,88 @@ class ExecutionEngine:
             except Exception as e:
                 logger.error(f"Failed to send pin values telemetry: {e}")
 
+    def _teardown_order(self) -> List[str]:
+        """Returns all block IDs in topological dependency order, downstream blocks first."""
+        # Build adjacency list of upstream dependencies.
+        # Block u depends on v if there is a data link from v to u, or execution link from v to u.
+        blocks_to_sort = list(self.blocks.keys())
+        upstream_map = {block_id: set() for block_id in blocks_to_sort}
+
+        # Data links: (target_block, target_pin) -> (source_block, source_pin)
+        # target reads from source, so target depends on source.
+        for (target_id, _), (source_id, _) in self.data_links.items():
+            if target_id in upstream_map and source_id in upstream_map:
+                upstream_map[target_id].add(source_id)
+
+        # Exec links: (source_block, source_pin) -> (target_block, target_pin)
+        # target executes after source, so target depends on source.
+        for (source_id, _), (target_id, _) in self.exec_links.items():
+            if target_id in upstream_map and source_id in upstream_map:
+                upstream_map[target_id].add(source_id)
+
+        # Cycle-safe post-order DFS to sort blocks topologically
+        visited = set()
+        visiting = set()
+        ordered_blocks = []
+
+        def dfs(block_id: str):
+            if block_id in visiting:
+                return  # Cycle detected, break to prevent infinite recursion
+            if block_id in visited:
+                return
+            visiting.add(block_id)
+            for upstream in upstream_map[block_id]:
+                dfs(upstream)
+            visiting.remove(block_id)
+            visited.add(block_id)
+            ordered_blocks.append(block_id)
+
+        for block_id in blocks_to_sort:
+            dfs(block_id)
+
+        # ordered_blocks has upstream blocks first, downstream blocks last.
+        # Reverse it so downstream blocks (which depend on upstream blocks) are torn down first.
+        return list(reversed(ordered_blocks))
+
+    async def _safe_state_block(self, block: BaseBlock):
+        """Sends a surviving block's safety commands, then forgets its memoized results."""
+        try:
+            await block.safe_state()
+        except Exception as e:
+            logger.error(f"Safe-state failed for block '{block.id}': {e}")
+        # Hardware may no longer match the cached outputs, so the next run must re-execute the block
+        block._has_executed = False
+        block._has_pulled = False
+
+    async def safe_state_all(self):
+        """Puts every block into a safe state without releasing connections (used by persistent clusters)."""
+        for block_id in self._teardown_order():
+            block = self.blocks.get(block_id)
+            if block:
+                await self._safe_state_block(block)
+
     async def _teardown_all(self):
-        """Teardown all instantiated blocks in topological dependency order (downstream first)."""
+        """
+        Teardown all instantiated blocks in topological dependency order (downstream first).
+        Persistent blocks keep their connections, but after an abort or error they still get
+        their safe-state commands so a failed run never leaves e.g. a laser output enabled.
+        """
         async with self._teardown_lock:
             if self._teardown_complete:
                 return
             self._teardown_complete = True
-
-            # Build adjacency list of upstream dependencies.
-            # Block u depends on v if there is a data link from v to u, or execution link from v to u.
-            blocks_to_sort = list(self.blocks.keys())
-            upstream_map = {block_id: set() for block_id in blocks_to_sort}
-
-            # Data links: (target_block, target_pin) -> (source_block, source_pin)
-            # target reads from source, so target depends on source.
-            for (target_id, _), (source_id, _) in self.data_links.items():
-                if target_id in upstream_map and source_id in upstream_map:
-                    upstream_map[target_id].add(source_id)
-
-            # Exec links: (source_block, source_pin) -> (target_block, target_pin)
-            # target executes after source, so target depends on source.
-            for (source_id, _), (target_id, _) in self.exec_links.items():
-                if target_id in upstream_map and source_id in upstream_map:
-                    upstream_map[target_id].add(source_id)
-
-            # Cycle-safe post-order DFS to sort blocks topologically
-            visited = set()
-            visiting = set()
-            ordered_blocks = []
-
-            def dfs(block_id: str):
-                if block_id in visiting:
-                    return  # Cycle detected, break to prevent infinite recursion
-                if block_id in visited:
-                    return
-                visiting.add(block_id)
-                for upstream in upstream_map[block_id]:
-                    dfs(upstream)
-                visiting.remove(block_id)
-                visited.add(block_id)
-                ordered_blocks.append(block_id)
-
-            for block_id in blocks_to_sort:
-                dfs(block_id)
-
-            # ordered_blocks has upstream blocks first, downstream blocks last.
-            # Reverse it so downstream blocks (which depend on upstream blocks) are torn down first.
-            teardown_targets = list(reversed(ordered_blocks))
+            emergency = self.state == "ABORTED"
 
             # Execute teardown hooks
-            for block_id in teardown_targets:
+            for block_id in self._teardown_order():
                 block = self.blocks.get(block_id)
                 if block:
-                    # Skip teardown for persistent blocks
                     if block.properties.get("isPersistent", False):
-                        logger.debug(f"Skipping teardown for persistent block '{block_id}'")
+                        if emergency:
+                            logger.warning(f"Run aborted: sending safe-state to persistent block '{block_id}'")
+                            await self._safe_state_block(block)
+                        else:
+                            logger.debug(f"Skipping teardown for persistent block '{block_id}'")
                         continue
                     try:
                         await block.teardown()

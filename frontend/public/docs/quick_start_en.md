@@ -81,7 +81,7 @@ ComfyLAB was built from the ground up to offer extreme flexibility without restr
 | **Progress & Timing** | Countdown wait block (with skip button), progress bar widgets (0–100%), ETR clocks, and smart loops with `%` / ETR outputs. |
 | **Scientific Plots** | Real-time 2D & 3D: XY line (linear/log), Dual-Y, Bar, Box plot, Histogram, 3D Surface/Scatter, Polar, Waterfall, and 2D Heatmaps. |
 | **Native Libraries** | Direct C/C++ library calling (`.dll` on Windows, `.so` on Linux/macOS) via interactive Signature Editor without Python wrappers. |
-| **Polyglot Scripting** | Inline custom blocks in 9 languages: Python, Rust, JS, TS, Julia, R, Lua, Octave, Wolfram. Access to `COMFYLAB_WORKSPACE`. |
+| **Polyglot Scripting** | Inline custom blocks in 13 languages: Python, Rust, C#, JS, TS, Julia, R, Lua, Octave, Maxima, SageMath, Wolfram, PowerShell. Access to `COMFYLAB_WORKSPACE`. |
 | **Python Ecosystem** | Seamless integration with virtual environments (`.venv`), allowing any PyPI package (`scipy`, `pandas`, `torch`, `opencv`). |
 | **Packaging & Export** | Publish custom blocks directly to the sidebar palette or bundle complete workflows into redistributable `.cfy` packages. |
 | **Signal Processing** | NumPy matrix math, FFT power spectrum, curve fitting (Gaussian, exponential, polynomial), digital filtering, and peak detection. |
@@ -114,7 +114,7 @@ Understanding how ComfyLAB compares to traditional lab software tools highlights
 | **GUI & Plotting** | Manual (PyQt, Tkinter) | Built-in Front Panel | Built-in Figure windows | **Instant 2D/3D & Dashboard (`D`)** |
 | **Offline Simulation** | Manual mock libraries | Basic software mocks | Simulink physics engine | **Built-in SCPI Virtual Instruments** |
 | **Files & Versioning** | Plain text `.py` (Git-friendly) | Binary `.vi` (Merge conflicts) | `.m` / Binary `.slx` | **Clean JSON Blueprints (Git-friendly)** |
-| **Custom Code** | Native Python | Complex C/Python nodes | S-Functions / MATLAB | **9-Language Script Blocks & DLL/SO** |
+| **Custom Code** | Native Python | Complex C/Python nodes | S-Functions / MATLAB | **13-Language Script Blocks & DLL/SO** |
 | **Architecture** | Monolithic script | Heavy desktop app | Heavy desktop suite | **Decoupled Web UI + FastAPI Server** |
 | **Hardware Locks** | Manual implementation | Built-in DAQmx | Instrument Toolbox | **Automatic async VISA lock manager** |
 
@@ -237,7 +237,7 @@ Connections between blocks in ComfyLAB are strictly divided into two distinct ca
 | 🖥️ **Virtual Instruments** | Zero-hardware simulation: `VirtOsc Connect/Acquire`, `VirtSigGen Connect/Config Wave`, `Simulated RC Circuit`. |
 | 🔬 **Modular Device Drivers** | Modular vendor drivers installed on demand via the ComfyLAB Store: Oscilloscopes (Tektronix, Keysight), Multimeters (HP/Agilent 34401A), Power Supplies, Horiba Spectrometers, CAEN Digitizers, Thorlabs Motors, Minipa, etc. |
 | 📈 **Display & Dashboard** | Data visualization and monitoring: `XY Plot`, `Dual Y-Axis Plot`, `Bar Plot`, `Box / Violin Plot`, `Histogram`, `3D Surface/Scatter`, `Polar Plot`, `Waterfall Spectrogram`, `Heatmap Plot`, `Progress Bar`, `ETR Clock`. |
-| ⚙️ **Scripting & Native** | Custom extensions: `Native Library Invocation` (C/C++ DLL/SO via Signature Editor), `Multi-Language Script Blocks` (Python, JS/TS, Julia, Rust, Lua, Octave, R, Wolfram). |
+| ⚙️ **Scripting & Native** | Custom extensions: `Native Library Invocation` (C/C++ DLL/SO via Signature Editor), `Multi-Language Script Blocks` (Python, JS/TS, Julia, Rust, C#, Lua, Octave, R, Maxima, SageMath, Wolfram, PowerShell). |
 
 <div style="page-break-before: always; break-before: page;"></div>
 

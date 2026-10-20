@@ -50,7 +50,7 @@ interface BlockInspectorPanelProps {
   onBlockDataChange: (id: string, key: string, value: any) => void;
   onReloadRegistry?: () => void;
   width?: number;
-  onResizeHandleMouseDown?: (e: React.MouseEvent) => void;
+  onResizeHandlePointerDown?: (e: React.PointerEvent) => void;
   onToggleDashboard?: (blockId: string) => void;
   onTogglePinDashboard?: (blockId: string, pinName: string) => void;
   isBlockInDashboard?: boolean;
@@ -66,7 +66,7 @@ export const BlockInspectorPanel = ({
   onBlockDataChange,
   onReloadRegistry,
   width,
-  onResizeHandleMouseDown,
+  onResizeHandlePointerDown,
   onToggleDashboard,
   onTogglePinDashboard,
   isBlockInDashboard,
@@ -234,10 +234,10 @@ export const BlockInspectorPanel = ({
       }}
       onMouseDown={(e) => e.stopPropagation()}
     >
-      {onResizeHandleMouseDown && (
+      {onResizeHandlePointerDown && (
         <div
           className="sidebar-resize-handle left-edge"
-          onMouseDown={onResizeHandleMouseDown}
+          onPointerDown={onResizeHandlePointerDown}
           title="Drag to resize inspector"
         />
       )}

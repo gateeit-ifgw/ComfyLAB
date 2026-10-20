@@ -2667,3 +2667,48 @@ text.annotation-element.hoverable-eraser:hover {
 }
 
 
+
+
+/* --- TOUCH SCREENS ---
+ * Only for devices whose primary pointer is a finger, so mouse users see no change.
+ * Hit areas grow via invisible pseudo-elements to keep block layouts and visuals intact. */
+.flow-wrapper {
+  -webkit-touch-callout: none; /* no iOS callout during long-press (opens the context menu instead) */
+}
+
+.sidebar-resize-handle,
+.script-editor-resize-handle {
+  touch-action: none; /* let the finger drag the resizer instead of scrolling the page */
+}
+
+@media (pointer: coarse) {
+  /* Pins: ~32px touch target around the visible dot */
+  .react-flow__handle::after {
+    content: '';
+    position: absolute;
+    inset: -12px;
+    border-radius: 50%;
+  }
+
+  /* Block resize grips */
+  .react-flow__resize-control.handle {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  /* Panel resizers: wider grab strip */
+  .sidebar-resize-handle,
+  .script-editor-resize-handle {
+    width: 18px;
+  }
+
+  /* Sidebar block entries are tap targets (tap adds the block to the canvas) */
+  .dndblock {
+    min-height: 40px;
+  }
+
+  /* Easier-to-hit wires for tap-select / long-press */
+  .react-flow__edge-interaction {
+    stroke-width: 28px;
+  }
+}

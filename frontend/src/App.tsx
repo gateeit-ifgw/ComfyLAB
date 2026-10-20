@@ -68,6 +68,7 @@ import { useWorkspaceHistory } from './hooks/useWorkspaceHistory';
 import { useWhiteboardState } from './hooks/useWhiteboardState';
 import { useFlowExecution } from './hooks/useFlowExecution';
 import { useResizable } from './hooks/useResizable';
+import { useLongPressContextMenu } from './hooks/useLongPressContextMenu';
 import { DashboardPanel } from './components/DashboardPanel';
 import type { DashboardItem } from './components/widgets/DashboardCard';
 
@@ -373,6 +374,7 @@ function Flow() {
   } | null>(null);
 
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  useLongPressContextMenu(reactFlowWrapper);
   const [blocks, setBlocks, reactFlowOnBlocksChange] = useNodesState<any>([]);
   const [edges, setEdges, reactFlowOnEdgesChange] = useEdgesState<any>([]);
   const [snapPreviewEdges, setSnapPreviewEdges] = useState<any[]>([]);
@@ -494,7 +496,10 @@ function Flow() {
   canvasStackRef.current = canvasStack;
   currentLevelIndexRef.current = currentLevelIndex;
   const [shouldFitView, setShouldFitView] = useState(false);
-  const [canvasMode, setCanvasMode] = useState<'select' | 'pan' | 'cut' | 'draw'>('select');
+  // Touch-first devices start in Pan mode: one finger pans/drags blocks instead of drawing a selection box
+  const [canvasMode, setCanvasMode] = useState<'select' | 'pan' | 'cut' | 'draw'>(
+    () => (typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches ? 'pan' : 'select')
+  );
   const [snapToGrid, setSnapToGrid] = useState<boolean>(() => {
     return localStorage.getItem('comfylab-snap-to-grid') === 'true';
   });
@@ -2615,6 +2620,19 @@ return {
     [addBlockAtClientPosition, isLocked]
   );
 
+  // Touch alternative to drag-and-drop: a tapped sidebar block lands in the middle of the visible canvas,
+  // cascading slightly so repeated taps don't stack blocks exactly on top of each other
+  const tapAddCountRef = useRef(0);
+  const onTapAddBlock = useCallback(
+    (type: string) => {
+      if (isLocked || !reactFlowWrapper.current) return;
+      const rect = reactFlowWrapper.current.getBoundingClientRect();
+      const offset = (tapAddCountRef.current++ % 6) * 24;
+      addBlockAtClientPosition(type, rect.left + rect.width / 2 - 80 + offset, rect.top + rect.height / 2 - 40 + offset);
+    },
+    [addBlockAtClientPosition, isLocked]
+  );
+
   const handleReplaceBlock = useCallback((blockId: string, replacementAction: string) => {
     pushStateToHistory();
     setIsDirty(true);
@@ -2862,12 +2880,14 @@ return {
       setCutterPath(null);
     };
 
-    window.addEventListener('mousemove', handleGlobalMouseMove);
-    window.addEventListener('mouseup', handleGlobalMouseUp);
+    window.addEventListener('pointermove', handleGlobalMouseMove);
+    window.addEventListener('pointerup', handleGlobalMouseUp);
+    window.addEventListener('pointercancel', handleGlobalMouseUp);
 
     return () => {
-      window.removeEventListener('mousemove', handleGlobalMouseMove);
-      window.removeEventListener('mouseup', handleGlobalMouseUp);
+      window.removeEventListener('pointermove', handleGlobalMouseMove);
+      window.removeEventListener('pointerup', handleGlobalMouseUp);
+      window.removeEventListener('pointercancel', handleGlobalMouseUp);
     };
   }, [isCutting, cutterPath, setEdges, pushStateToHistory]);
 
@@ -4085,12 +4105,13 @@ return {
             isScanningVisa={isScanningVisa}
             connectedCount={connectedDevices.length}
             width={sidebarResizer.width}
-            onResizeHandleMouseDown={sidebarResizer.handleProps.onMouseDown}
+            onResizeHandlePointerDown={sidebarResizer.handleProps.onPointerDown}
+            onTapAddBlock={onTapAddBlock}
           />
 
 
           {/* --- CANVAS WRAPPER --- */}
-          <div className="flow-wrapper" ref={reactFlowWrapper} style={{ position: 'relative' }} onMouseDown={handleWrapperMouseDown}>
+          <div className="flow-wrapper" ref={reactFlowWrapper} style={{ position: 'relative' }} onPointerDown={handleWrapperMouseDown}>
             {errorMessage && (
               <div className="canvas-error-alert glass-panel">
                 <span className="error-icon">⚠️</span>
@@ -4545,7 +4566,7 @@ return {
                 onBlockDataChange={onBlockDataChange}
                 onReloadRegistry={handleReloadRegistry}
                 width={inspectorResizer.width}
-                onResizeHandleMouseDown={inspectorResizer.handleProps.onMouseDown}
+                onResizeHandlePointerDown={inspectorResizer.handleProps.onPointerDown}
                 onToggleDashboard={toggleBlockDashboard}
                 onTogglePinDashboard={togglePinDashboard}
                 isBlockInDashboard={dashboardItems.some((i) => i.blockId === inspectedBlockId && i.type === 'block')}
@@ -4601,7 +4622,7 @@ return {
                 }}
                 onBlockDataChange={onBlockDataChange}
                 width={dashboardResizer.width}
-                onResizeHandleMouseDown={dashboardResizer.handleProps.onMouseDown}
+                onResizeHandlePointerDown={dashboardResizer.handleProps.onPointerDown}
               />
             )}
           </div>

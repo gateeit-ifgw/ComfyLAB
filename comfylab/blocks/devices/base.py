@@ -125,13 +125,15 @@ class BaseDeviceConnectBlock(BaseDeviceBlock):
         """Hook for subclasses to send safety commands on teardown."""
         pass
 
+    async def safe_state(self) -> None:
+        """Sends the `_device_teardown` safety commands while keeping the connection open."""
+        if self._device:
+            await self._device_teardown(self._device, self._lock_manager)
+
     async def teardown(self) -> None:
         if self._device:
             try:
-                if self._lock_manager:
-                    await self._device_teardown(self._device, self._lock_manager)
-                else:
-                    await self._device_teardown(self._device, None)
+                await self.safe_state()
             except Exception as e:
                 logger.warning(f"Error in device teardown hook: {e}")
 

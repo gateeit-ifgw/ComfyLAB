@@ -76,7 +76,7 @@ export const WhiteboardSidebar = ({
         zIndex: 1000,
         pointerEvents: 'auto',
       }}
-      onMouseDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
     >
       <div className="sidebar-header">
         <h3>✏️ {t('whiteboard.title', 'Notes & Whiteboard')}</h3>

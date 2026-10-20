@@ -468,7 +468,7 @@ export const ScriptEditorPanel = ({
     }
   }, [registryLayout, actionType, isOpen]);
 
-  const handleResize = useCallback((e: MouseEvent) => {
+  const handleResize = useCallback((e: PointerEvent) => {
     if (!isResizingRef.current) return;
     const newWidth = window.innerWidth - e.clientX;
     // Limit resizing between 350px and 85% of screen width
@@ -479,22 +479,25 @@ export const ScriptEditorPanel = ({
 
   const stopResize = useCallback(() => {
     isResizingRef.current = false;
-    document.removeEventListener('mousemove', handleResize);
-    document.removeEventListener('mouseup', stopResize);
+    document.removeEventListener('pointermove', handleResize);
+    document.removeEventListener('pointerup', stopResize);
+    document.removeEventListener('pointercancel', stopResize);
   }, [handleResize]);
 
-  const startResize = useCallback((e: React.MouseEvent) => {
+  const startResize = useCallback((e: React.PointerEvent) => {
     e.preventDefault();
     isResizingRef.current = true;
-    document.addEventListener('mousemove', handleResize);
-    document.addEventListener('mouseup', stopResize);
+    document.addEventListener('pointermove', handleResize);
+    document.addEventListener('pointerup', stopResize);
+    document.addEventListener('pointercancel', stopResize);
   }, [handleResize, stopResize]);
 
   // Clean up global listeners on unmount
   useEffect(() => {
     return () => {
-      document.removeEventListener('mousemove', handleResize);
-      document.removeEventListener('mouseup', stopResize);
+      document.removeEventListener('pointermove', handleResize);
+      document.removeEventListener('pointerup', stopResize);
+      document.removeEventListener('pointercancel', stopResize);
     };
   }, [handleResize, stopResize]);
 
@@ -578,7 +581,7 @@ export const ScriptEditorPanel = ({
       tabIndex={0}
       style={{ width: `${drawerWidth}px` }}
     >
-      <div className="script-editor-resize-handle" onMouseDown={startResize} />
+      <div className="script-editor-resize-handle" onPointerDown={startResize} />
       <div className="script-editor-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span className="script-editor-icon">{langDetails.icon}</span>

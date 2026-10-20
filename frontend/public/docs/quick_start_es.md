@@ -53,7 +53,7 @@ ComfyLAB fue diseñado desde cero para ofrecer máxima flexibilidad sin limitar 
 | **Tiempo y Progreso** | Bloque Countdown Wait (con botón saltar), barras de progreso (0–100%), reloj ETR y bucles inteligentes con salidas de `%` y ETR. |
 | **Gráficos Científicos** | 2D y 3D en tiempo real: XY (lineal/log), Dual-Y, Barras, Box plot, Histograma, Superficie/Dispersión 3D, Polar, Cascada y Heatmaps. |
 | **Bibliotecas Nativas** | Invocación directa de C/C++ (`.dll` en Windows, `.so` en Linux/macOS) mediante Editor de Firmas interactivo, sin código wrapper. |
-| **Scripts Políglotas** | Bloques de script en 9 lenguajes: Python, Rust, JS, TS, Julia, R, Lua, Octave y Wolfram. Acceso a `COMFYLAB_WORKSPACE`. |
+| **Scripts Políglotas** | Bloques de script en 13 lenguajes: Python, Rust, C#, JS, TS, Julia, R, Lua, Octave, Maxima, SageMath, Wolfram y PowerShell. Acceso a `COMFYLAB_WORKSPACE`. |
 | **Ecosistema Python** | Conexión directa con entornos virtuales (`.venv`), permitiendo cualquier paquete PyPI (`scipy`, `pandas`, `torch`, `opencv`). |
 | **Publicación y Paquetes** | Publica bloques de script directamente en la paleta lateral o empaqueta flujos completos en paquetes `.cfy`. |
 | **Procesamiento de Señales** | Operaciones matriciales NumPy, espectro FFT, ajuste de curvas (Gaussiana, exponencial, polinómica), filtros digitales y detección de picos. |
@@ -86,7 +86,7 @@ Comprender cómo se compara ComfyLAB con las herramientas de laboratorio tradici
 | **Interfaz y Gráficos** | Manual (PyQt, Tkinter) | Panel Frontal Integrado | Ventanas de Figura | **Gráficos 2D/3D & Dashboard (`D`)** |
 | **Simulación Offline** | Mocks manuales | Mocks de software básicos | Motor físico de Simulink | **Instrumentos Virtuales SCPI Integrados** |
 | **Archivos y Git** | Texto plano `.py` (Git-friendly) | Binario `.vi` (Conflictos en Git)| `.m` / Binario `.slx` | **Blueprints JSON Limpios (Git-friendly)** |
-| **Código Personalizado** | Nativo en Python | Nodos complejos C/Python | Funciones S / MATLAB | **Scripts en 9 Lenguajes y DLL/SO** |
+| **Código Personalizado** | Nativo en Python | Nodos complejos C/Python | Funciones S / MATLAB | **Scripts en 13 Lenguajes y DLL/SO** |
 | **Arquitectura** | Script monolítico | Aplicación desktop pesada | Entorno desktop pesado | **Interfaz Web + Servidor FastAPI** |
 | **Bloqueos de Hardware** | Implementación manual | Integrado en DAQmx | Instrument Toolbox | **Gestor de Bloqueo VISA Asíncrono** |
 
@@ -209,7 +209,7 @@ Las conexiones entre bloques en ComfyLAB se dividen estrictamente en dos categor
 | 🖥️ **Instrumentos Virtuales** | Simulación sin hardware: `Conexión VirtOsc`, `Adquirir VirtOsc`, `Conexión VirtSigGen`, `Configurar Onda VirtSigGen`, `Circuito RC Simulado`. |
 | 🔬 **Drivers Modulares de Fabricantes** | Drivers modulares instalados a pedido vía ComfyLAB Store: Osciloscopios (Tektronix, Keysight), Multímetros (HP/Agilent 34401A), Fuentes DC, Espectrómetros Horiba, Digitalizadores CAEN, Motores Thorlabs, Minipa, etc. |
 | 📈 **Visualización y Dashboard** | Visualización de datos y monitoreo: `Gráfico XY` (`XY Plot`), `Gráfico de Tiempo`, `Gráfico de Doble Eje Y`, `Gráfico Box / Violin`, `Gráfico de Barras`, `Histograma`, `Gráfico 3D`, `Gráfico Polar`, `Espectrograma Cascada`, `Mapa de Calor`, `Barra de Progreso`, `Reloj ETR`. |
-| ⚙️ **Scripts y Nativo** | Extensiones personalizadas: `Script Python` (`Python Script`), `Python Externo`, `Script JavaScript`, `Script TypeScript`, `Script Julia`, `Script Rust`, `Script Lua`, `Script Octave`, `Script R`, `Script Wolfram`, `Cargar DLL/SO`. |
+| ⚙️ **Scripts y Nativo** | Extensiones personalizadas: `Script Python` (`Python Script`), `Python Externo`, `Script JavaScript`, `Script TypeScript`, `Script Julia`, `Script Rust`, `Script Lua`, `Script Octave`, `Script R`, `Script Wolfram`, `Script SageMath`, `Script Maxima`, `Script PowerShell`, `Script C#`, `Cargar DLL/SO`. |
 
 <div style="page-break-before: always; break-before: page;"></div>
 

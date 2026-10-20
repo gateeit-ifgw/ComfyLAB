@@ -43,7 +43,9 @@ interface SidebarProps {
   isScanningVisa?: boolean;
   connectedCount?: number;
   width?: number;
-  onResizeHandleMouseDown?: (e: React.MouseEvent) => void;
+  onResizeHandlePointerDown?: (e: React.PointerEvent) => void;
+  // Touch/pen taps on a block item add it to the canvas (HTML5 drag-and-drop is unreliable on touch screens)
+  onTapAddBlock?: (type: string) => void;
 }
 
 
@@ -55,6 +57,7 @@ interface CategoryTreeItemProps {
   searchQuery: string;
   expandedMap: Record<string, boolean>;
   toggleExpand: (path: string) => void;
+  onTapAddBlock?: (type: string) => void;
 }
 
 const CategoryTreeItem = ({
@@ -65,6 +68,7 @@ const CategoryTreeItem = ({
   searchQuery,
   expandedMap,
   toggleExpand,
+  onTapAddBlock,
 }: CategoryTreeItemProps) => {
   const isExpanded = searchQuery.trim() !== '' || expandedMap[path];
   const isTopLevel = level === 0;
@@ -101,6 +105,8 @@ const CategoryTreeItem = ({
                   key={block.type} 
                   className="dndblock" 
                   onDragStart={(e) => { e.dataTransfer.setData('application/reactflow', block.type); }} 
+                  // pointerup only fires for a tap; a scroll gesture ends in pointercancel instead
+                  onPointerUp={(e) => { if (e.pointerType !== 'mouse') onTapAddBlock?.(block.type); }}
                   draggable
                   title={desc}
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
@@ -138,6 +144,7 @@ const CategoryTreeItem = ({
                 searchQuery={searchQuery}
                 expandedMap={expandedMap}
                 toggleExpand={toggleExpand}
+                onTapAddBlock={onTapAddBlock}
               />
             ))}
           </div>
@@ -159,7 +166,8 @@ export const Sidebar = ({
   isScanningVisa,
   connectedCount,
   width,
-  onResizeHandleMouseDown,
+  onResizeHandlePointerDown,
+  onTapAddBlock,
 }: SidebarProps) => {
   const { t } = useTranslation();
   const [expandedMap, setExpandedMap] = useState<Record<string, boolean>>({});
@@ -181,10 +189,10 @@ export const Sidebar = ({
       className="sidebar-container glass-panel nodrag nowheel"
       style={{ width: width ? `${width}px` : undefined }}
     >
-      {onResizeHandleMouseDown && (
+      {onResizeHandlePointerDown && (
         <div 
           className="sidebar-resize-handle right-edge" 
-          onMouseDown={onResizeHandleMouseDown}
+          onPointerDown={onResizeHandlePointerDown}
           title="Drag to resize library"
         />
       )}
@@ -290,6 +298,7 @@ export const Sidebar = ({
             searchQuery={searchQuery}
             expandedMap={expandedMap}
             toggleExpand={toggleExpand}
+            onTapAddBlock={onTapAddBlock}
           />
         ))}
       </div>

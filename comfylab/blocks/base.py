@@ -216,6 +216,14 @@ class BaseBlock:
         """
         pass
 
+    async def safe_state(self) -> None:
+        """
+        Transitions associated hardware to a safe state WITHOUT releasing it.
+        Called on abort/error for persistent blocks, whose full teardown is skipped so
+        their connections survive between runs. Must be idempotent. Default is a no-op.
+        """
+        pass
+
     async def clear_data(self) -> None:
         """
         Resets any transient execution or output data stored on the block.

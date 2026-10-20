@@ -38,6 +38,10 @@ def ensure_slow_block_registered():
     from comfylab.engine.registry import BLOCK_REGISTRY
     if "test/slow_block" not in BLOCK_REGISTRY:
         BLOCK_REGISTRY["test/slow_block"] = SlowBlock
+    if "test/fake_device" not in BLOCK_REGISTRY:
+        BLOCK_REGISTRY["test/fake_device"] = FakeDeviceBlock
+    if "test/failing_block" not in BLOCK_REGISTRY:
+        BLOCK_REGISTRY["test/failing_block"] = FailingBlock
 
 
 
@@ -787,3 +791,132 @@ async def test_countdown_wait_skip():
 
 
 
+
+
+@pytest.mark.asyncio
+async def test_entry_points_use_primary_exec_pin_only():
+    # Timer has nothing wired (entry block) -> must start on 'Start' only, never on its unwired 'Stop'.
+    # Accumulate has 'Append' wired -> must not be an entry point despite its unwired 'Reset'.
+    blueprint = {
+        "blocks": [
+            {"id": "timer", "type": "control_flow/timing/timer", "properties": {"Interval": 1.0, "Count": 3}},
+            {"id": "accum", "type": "Lists/manipulation/accumulate", "properties": {}}
+        ],
+        "links": [
+            {"id": "l1", "type": "exec", "source_block": "timer", "source_pin": "Tick", "target_block": "accum", "target_pin": "Append"},
+            {"id": "l2", "type": "data", "source_block": "timer", "source_pin": "Index", "target_block": "accum", "target_pin": "Value"}
+        ]
+    }
+
+    engine = ExecutionEngine()
+    engine.load_blueprint(blueprint)
+    assert engine._find_entry_points() == [("timer", "Start")]
+
+    await engine.run()
+    assert engine.blocks["accum"]._list == [0, 1, 2]
+
+
+@pytest.mark.asyncio
+async def test_secondary_exec_pin_wired_is_not_entry_point():
+    # Only 'Reset' is wired: the unwired 'Append' must not fire on its own at run start
+    blueprint = {
+        "blocks": [
+            {"id": "print", "type": "outputs/basic/print", "properties": {"Value": 1.0}},
+            {"id": "accum", "type": "Lists/manipulation/accumulate", "properties": {}}
+        ],
+        "links": [
+            {"id": "l1", "type": "exec", "source_block": "print", "source_pin": "Out", "target_block": "accum", "target_pin": "Reset"}
+        ]
+    }
+
+    engine = ExecutionEngine()
+    engine.load_blueprint(blueprint)
+    assert engine._find_entry_points() == [("print", "In")]
+
+
+SAFE_STATE_LOG = []
+
+@register_block("test/fake_device")
+class FakeDeviceBlock(BaseBlock):
+    inputs_def = [ExecIn("In")]
+    outputs_def = [ExecOut("Out")]
+
+    async def execute(self, context: ExecutionContext, trigger_pin: str) -> Optional[str]:
+        return "Out"
+
+    async def safe_state(self):
+        SAFE_STATE_LOG.append(("safe", self.id))
+
+    async def teardown(self):
+        SAFE_STATE_LOG.append(("teardown", self.id))
+
+
+@register_block("test/failing_block")
+class FailingBlock(BaseBlock):
+    inputs_def = [ExecIn("In")]
+    outputs_def = [ExecOut("Out")]
+
+    async def execute(self, context: ExecutionContext, trigger_pin: str) -> Optional[str]:
+        raise RuntimeError("simulated failure")
+
+
+def _persistent_device_blueprint(fail: bool):
+    blocks = [{"id": "dev", "type": "test/fake_device", "properties": {"isPersistent": True}}]
+    links = []
+    if fail:
+        blocks.append({"id": "fail", "type": "test/failing_block", "properties": {}})
+        links.append({"id": "l1", "type": "exec", "source_block": "dev", "source_pin": "Out", "target_block": "fail", "target_pin": "In"})
+    return {"blocks": blocks, "links": links}
+
+
+@pytest.mark.asyncio
+async def test_persistent_block_kept_alive_on_success():
+    SAFE_STATE_LOG.clear()
+    engine = ExecutionEngine()
+    engine.load_blueprint(_persistent_device_blueprint(fail=False))
+    await engine.run()
+
+    assert SAFE_STATE_LOG == []
+    assert engine.blocks["dev"]._has_executed is True
+
+
+@pytest.mark.asyncio
+async def test_persistent_block_gets_safe_state_on_error():
+    SAFE_STATE_LOG.clear()
+    engine = ExecutionEngine()
+    engine.load_blueprint(_persistent_device_blueprint(fail=True))
+    with pytest.raises(RuntimeError):
+        await engine.run()
+
+    # Safety commands sent, connection kept (no full teardown), memo invalidated for next run
+    assert ("safe", "dev") in SAFE_STATE_LOG
+    assert ("teardown", "dev") not in SAFE_STATE_LOG
+    assert engine.blocks["dev"]._has_executed is False
+
+
+@pytest.mark.asyncio
+async def test_device_connect_safe_state_keeps_connection():
+    from comfylab.blocks.devices.base import BaseDeviceConnectBlock
+
+    class FakeVisa:
+        closed = False
+        def close(self):
+            self.closed = True
+
+    calls = []
+
+    class SafeConnect(BaseDeviceConnectBlock):
+        async def _device_teardown(self, device, lock_manager):
+            calls.append(device)
+
+    block = SafeConnect("conn")
+    device = FakeVisa()
+    block._device = device
+
+    await block.safe_state()
+    assert calls == [device]
+    assert block._device is device and not device.closed
+
+    await block.teardown()
+    assert calls == [device, device]
+    assert device.closed and block._device is None

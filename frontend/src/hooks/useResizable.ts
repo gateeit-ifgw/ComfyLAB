@@ -53,7 +53,7 @@ export const useResizable = ({
   const startWidthRef = useRef(width);
   const isResizingRef = useRef(false);
 
-  const startResizing = useCallback((e: React.MouseEvent) => {
+  const startResizing = useCallback((e: React.PointerEvent) => {
     e.preventDefault();
     e.stopPropagation();
     startXRef.current = e.clientX;
@@ -65,7 +65,7 @@ export const useResizable = ({
   }, [width]);
 
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
+    const handlePointerMove = (e: PointerEvent) => {
       if (!isResizingRef.current) return;
       const deltaX = e.clientX - startXRef.current;
       // If panel is on left: dragging right (deltaX > 0) expands panel
@@ -81,7 +81,7 @@ export const useResizable = ({
       }
     };
 
-    const handleMouseUp = () => {
+    const handlePointerUp = () => {
       if (!isResizingRef.current) return;
       isResizingRef.current = false;
       setIsResizing(false);
@@ -97,11 +97,14 @@ export const useResizable = ({
       }
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    // Pointer events cover mouse, touch and pen alike
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerUp);
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerUp);
     };
   }, [direction, minWidth, maxWidth, storageKey, onWidthChange, width]);
 
@@ -119,7 +122,7 @@ export const useResizable = ({
     setWidth,
     isResizing,
     handleProps: {
-      onMouseDown: startResizing,
+      onPointerDown: startResizing,
     },
   };
 };

@@ -31,7 +31,7 @@ interface DashboardPanelProps {
   onClearAll: () => void;
   onBlockDataChange: (blockId: string, key: string, value: any) => void;
   width?: number;
-  onResizeHandleMouseDown?: (e: React.MouseEvent) => void;
+  onResizeHandlePointerDown?: (e: React.PointerEvent) => void;
 }
 
 export const DashboardPanel: React.FC<DashboardPanelProps> = ({
@@ -48,7 +48,7 @@ export const DashboardPanel: React.FC<DashboardPanelProps> = ({
   onClearAll,
   onBlockDataChange,
   width = 440,
-  onResizeHandleMouseDown,
+  onResizeHandlePointerDown,
 }) => {
   const { t } = useTranslation();
 
@@ -180,10 +180,10 @@ export const DashboardPanel: React.FC<DashboardPanelProps> = ({
       onMouseDown={(e) => e.stopPropagation()}
     >
       {/* Resizer Handle on Left Edge (when not maximized) */}
-      {!isMaximized && onResizeHandleMouseDown && (
+      {!isMaximized && onResizeHandlePointerDown && (
         <div
           className="sidebar-resize-handle left-edge"
-          onMouseDown={onResizeHandleMouseDown}
+          onPointerDown={onResizeHandlePointerDown}
           title={t('dashboard.resizeHandle', 'Drag to resize dashboard')}
         />
       )}

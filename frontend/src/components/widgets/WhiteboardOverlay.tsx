@@ -195,7 +195,7 @@ export const WhiteboardOverlay = ({
 
     const commonProps = {
       className: `annotation-element ${isEraser ? 'hoverable-eraser' : ''}`,
-      onMouseDown: (e: React.MouseEvent) => {
+      onPointerDown: (e: React.MouseEvent) => {
         if (drawTool === 'select') {
           return;
         }
@@ -299,7 +299,7 @@ export const WhiteboardOverlay = ({
                 '--annotation-fill-opacity': fillOpacityVal,
               } as any}
               className="annotation-element fill-element"
-              onMouseDown={(e) => { if (drawTool === 'select') return; if (isEraser) e.stopPropagation(); }}
+              onPointerDown={(e) => { if (drawTool === 'select') return; if (isEraser) e.stopPropagation(); }}
             />
           );
           polyElement = (
@@ -529,7 +529,7 @@ export const WhiteboardOverlay = ({
                 '--annotation-fill-opacity': fillOpacityVal,
               } as any}
               className="annotation-element fill-element"
-              onMouseDown={(e) => { if (drawTool === 'select') return; if (isEraser) e.stopPropagation(); }}
+              onPointerDown={(e) => { if (drawTool === 'select') return; if (isEraser) e.stopPropagation(); }}
             />
           );
           return (
@@ -579,7 +579,7 @@ export const WhiteboardOverlay = ({
                 '--annotation-fill-opacity': fillOpacityVal,
               } as any}
               className="annotation-element fill-element"
-              onMouseDown={(e) => { if (drawTool === 'select') return; if (isEraser) e.stopPropagation(); }}
+              onPointerDown={(e) => { if (drawTool === 'select') return; if (isEraser) e.stopPropagation(); }}
             />
           );
           return (
@@ -607,8 +607,8 @@ export const WhiteboardOverlay = ({
               width={width}
               height={height}
               style={{ overflow: 'visible' }}
-              onMouseDown={(e) => e.stopPropagation()}
-              onMouseUp={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+              onPointerUp={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
             >
               <div
@@ -664,7 +664,7 @@ export const WhiteboardOverlay = ({
             width={width}
             height={height}
             style={{ overflow: 'visible' }}
-            onMouseDown={(e) => {
+            onPointerDown={(e) => {
               if (drawTool !== 'select') {
                 e.stopPropagation();
               }
@@ -709,8 +709,8 @@ export const WhiteboardOverlay = ({
               width={250}
               height={120}
               style={{ overflow: 'visible' }}
-              onMouseDown={(e) => e.stopPropagation()}
-              onMouseUp={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+              onPointerUp={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
             >
               <textarea
@@ -868,7 +868,7 @@ export const WhiteboardOverlay = ({
             stroke="#3b82f6"
             strokeWidth="2"
             style={{ cursor: 'crosshair', pointerEvents: 'auto' }}
-            onMouseDown={(e) => {
+            onPointerDown={(e) => {
               e.stopPropagation();
               if (onStartResize) onStartResize('p1', e);
             }}
@@ -881,7 +881,7 @@ export const WhiteboardOverlay = ({
             stroke="#3b82f6"
             strokeWidth="2"
             style={{ cursor: 'crosshair', pointerEvents: 'auto' }}
-            onMouseDown={(e) => {
+            onPointerDown={(e) => {
               e.stopPropagation();
               if (onStartResize) onStartResize('p2', e);
             }}
@@ -935,7 +935,7 @@ export const WhiteboardOverlay = ({
             stroke="#3b82f6"
             strokeWidth="2"
             style={{ cursor: h.cursor, pointerEvents: 'auto' }}
-            onMouseDown={(e) => {
+            onPointerDown={(e) => {
               e.stopPropagation();
               if (onStartResize) onStartResize(h.key, e);
             }}
@@ -957,11 +957,13 @@ export const WhiteboardOverlay = ({
         width: '100%',
         height: '100%',
         pointerEvents: canvasMode === 'draw' ? 'auto' : 'none',
+        // Stop the browser from panning/scrolling so a finger or pen can draw
+        touchAction: canvasMode === 'draw' ? 'none' : undefined,
         zIndex: canvasMode === 'draw' ? 999 : 1,
       }}
-      onMouseDown={canvasMode === 'draw' ? onMouseDown : undefined}
-      onMouseMove={canvasMode === 'draw' ? onMouseMove : undefined}
-      onMouseUp={canvasMode === 'draw' ? onMouseUp : undefined}
+      onPointerDown={canvasMode === 'draw' ? onMouseDown : undefined}
+      onPointerMove={canvasMode === 'draw' ? onMouseMove : undefined}
+      onPointerUp={canvasMode === 'draw' ? onMouseUp : undefined}
       onDoubleClick={canvasMode === 'draw' ? onDoubleClick : undefined}
       onContextMenu={(e) => { if (canvasMode === 'draw') e.preventDefault(); }}
       onWheel={canvasMode === 'draw' ? onWheel : undefined}

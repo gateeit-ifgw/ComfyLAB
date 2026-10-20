@@ -371,6 +371,11 @@ def register_cluster_block(cluster_def: ClusterDefinitionModel, file_path: str =
             sub_engine.load_blueprint(prefixed_blueprint)
             self._sub_engine = sub_engine
 
+        async def safe_state(self):
+            # A persistent cluster keeps its whole sub-engine alive, so every inner block goes safe
+            if self._sub_engine:
+                await self._sub_engine.safe_state_all()
+
         async def teardown(self):
             if self._sub_engine:
                 try:

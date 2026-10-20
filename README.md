@@ -122,7 +122,7 @@ ComfyLAB provides a rich, modular ecosystem of blocks for building automation wo
 - **File I/O & Storage**: Read and write CSV files, JSON data, Parquet, and raw text files with automatic path resolution.
 - **Visualization**: Interactive single and multi-trace line plots, scatter plots, and heatmaps/image viewers.
 - **Instruments & VISA**: Direct VISA SCPI command/query execution and built-in drivers for oscilloscopes, signal generators, DMMs, optical spectrum analyzers, and power supplies.
-- **Multi-Language Scripting**: Polyglot code execution blocks supporting 9 scripting languages (Python, Rust, JavaScript, TypeScript, Julia, R, Lua, Octave, Wolfram).
+- **Multi-Language Scripting**: Polyglot code execution blocks supporting 13 languages (Python, Rust, C#, JavaScript, TypeScript, Julia, R, Lua, Octave, Maxima, SageMath, Wolfram, PowerShell).
 - **Clusters**: Group complex sub-graphs into custom reusable cluster blocks with dynamic input/output boundaries.
 - **Utility & Timing**: Delays, timestamps, stopwatches, type conversion, console logging, and debugging inspectors.
 
